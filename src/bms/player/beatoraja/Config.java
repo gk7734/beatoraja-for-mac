@@ -1,0 +1,720 @@
+package bms.player.beatoraja;
+
+import static bms.player.beatoraja.Resolution.*;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.logging.Logger;
+
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonReader;
+import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.JsonWriter.OutputType;
+
+/**
+ * 各種設定項目。config.jsonで保持される
+ *
+ * @author exch
+ */
+public class Config implements Validatable {
+
+	private static final long MAX_CONFIG_FILE_SIZE = 1024 * 1024;
+	private static final int MAX_CONFIG_PATH_LENGTH = 4096;
+	private static final int MAX_CONFIG_LIST_ENTRIES = 128;
+	
+	/**
+	 * 旧コンフィグパス。そのうち削除
+	 */
+	static final Path configpath_old = Paths.get("config.json");
+	/**
+	 * コンフィグパス(UTF-8)
+	 */
+	static final Path configpath = Paths.get("config_sys.json");	
+
+	/**
+	 * 選択中のプレイヤー名
+	 */
+	private String playername;
+	/**
+	 * ディスプレイモード
+	 */
+	private DisplayMode displaymode = DisplayMode.WINDOW;
+	/**
+	 * 垂直同期
+	 */
+	private boolean vsync;
+	/**
+	 * 解像度
+	 */
+	private Resolution resolution = HD;
+
+	private boolean useResolution = true;
+	private int windowWidth = 1280;
+	private int windowHeight = 720;
+
+	/**
+	 * フォルダランプの有効/無効
+	 */
+	private boolean folderlamp = true;
+
+	/**
+	 * オーディオコンフィグ
+	 */
+	private AudioConfig audio;
+
+	/**
+	 * 最大FPS。垂直同期OFFの時のみ有効
+	 */
+	private int maxFramePerSecond = 240;
+
+	private int prepareFramePerSecond = 0;
+	/**
+	 * 検索バー同時表示上限数
+	 */
+	private int maxSearchBarCount = 10;
+	/**
+	 * 所持していない楽曲バーを表示するかどうか
+	 */
+	private boolean showNoSongExistingBar = true;
+	/**
+	 * 選曲バー移動速度の最初
+	 */
+	private int scrolldurationlow = 300;
+	/**
+	 * 選曲バー移動速度の2つ目以降
+	 */
+	private int scrolldurationhigh = 50;
+	/**
+	 * 選曲バーとレーンカバーのアナログスクロール
+	 */
+	private boolean analogScroll = true;
+	/**
+	 * 選曲バー移動速度に関連（アナログスクロール）
+	 */
+	private int analogTicksPerScroll = 3;
+
+	/**
+	 * プレビュー再生
+	 */
+	private SongPreview songPreview = SongPreview.LOOP;
+	/**
+	 * スキン画像のキャッシュイメージを作成するかどうか
+	 */
+    private boolean cacheSkinImage = false;
+    /**
+     * songinfoデータベースを使用するかどうか
+     */
+    private boolean useSongInfo = true;
+
+	private String songpath = SONGPATH_DEFAULT;
+	public static final String SONGPATH_DEFAULT = "songdata.db";
+
+	private String songinfopath = SONGINFOPATH_DEFAULT;
+	public static final String SONGINFOPATH_DEFAULT = "songinfo.db";
+
+	private String tablepath = TABLEPATH_DEFAULT;
+	public static final String TABLEPATH_DEFAULT = "table";
+
+	private String playerpath = PLAYERPATH_DEFAULT;
+	public static final String PLAYERPATH_DEFAULT = "player";
+
+	private String skinpath = SKINPATH_DEFAULT;
+	public static final String SKINPATH_DEFAULT = "skin";
+
+	private String bgmpath = "bgm";
+
+	private String soundpath = "sound";
+
+	private String systemfontpath = "font/VL-Gothic-Regular.ttf";
+	private String messagefontpath = "font/VL-Gothic-Regular.ttf";
+	/**
+	 * BMSルートディレクトリパス
+	 */
+	private String[] bmsroot = new String[0];
+	/**
+	 * 難易度表URL
+	 */
+	private String[] tableURL = DEFAULT_TABLEURL;
+	/**
+	 * BGA表示
+	 */
+	private int bga = BGA_ON;
+	public static final int BGA_ON = 0;
+	public static final int BGA_AUTO = 1;
+	public static final int BGA_OFF = 2;
+	/**
+	 * BGA拡大
+	 */
+	private int bgaExpand = BGAEXPAND_KEEP_ASPECT_RATIO;
+	public static final int BGAEXPAND_FULL = 0;
+	public static final int BGAEXPAND_KEEP_ASPECT_RATIO = 1;
+	public static final int BGAEXPAND_OFF = 2;
+
+	private int frameskip = 1;
+
+	private boolean updatesong = false;
+
+	/**
+	 * Whether song database updates also scan charts stored in ZIP or RAR archives.
+	 */
+	private boolean scanSongArchives = false;
+
+	/**
+	 * Controls whether song archives are read directly or expanded into the song
+	 * library during a song database update.
+	 */
+	private SongArchiveExtractMode songArchiveExtractMode = SongArchiveExtractMode.NO_TEMPORARY_FILES;
+
+	private int skinPixmapGen = 4;
+	private int stagefilePixmapGen = 2;
+	private int bannerPixmapGen = 2;
+	private int songResourceGen = 1;
+
+	private boolean enableIpfs = true;
+	private String ipfsurl = "https://gateway.ipfs.io/";
+
+	private int irSendCount = 5;
+	private boolean setClipboardScreenshot = false;
+
+	private static final String[] DEFAULT_TABLEURL = { "https://rattoto10.jounin.jp/table.html",
+			"https://rattoto10.jounin.jp/table_insane.html",
+			"https://rattoto10.jounin.jp/table_overjoy.html",
+			"https://miraiscarlet.github.io/bms/table/genocide_normal/normal_bms.html",
+			"https://miraiscarlet.github.io/bms/table/genocide_insane/insane_bms.html",
+			"http://walkure.net/hakkyou/for_glassist/bms/?lamp=easy",
+			"http://walkure.net/hakkyou/for_glassist/bms/?lamp=normal",
+			"http://walkure.net/hakkyou/for_glassist/bms/?lamp=hard",
+			"http://walkure.net/hakkyou/for_glassist/bms/?lamp=fc",
+			"https://stellabms.xyz/sl/table.html",
+			"https://stellabms.xyz/st/table.html",
+			"https://deltabms.yaruki0.net/table/data/dpdelta_head.json",
+			"https://deltabms.yaruki0.net/table/data/insane_head.json",
+			"https://stellabms.xyz/dp/table.html",
+			"https://stellabms.xyz/dpst/table.html",
+			"https://mocha-repository.info/table/ln_header.json",
+			"https://pmsdifficulty.xxxxxxxx.jp/_pastoral_insane_table.html",
+			"https://excln.github.io/table24k/table.html",
+	};
+
+	public Config() {
+	}
+
+	public String getPlayername() {
+		return playername;
+	}
+
+	public void setPlayername(String playername) {
+		this.playername = playername;
+	}
+
+	public boolean isVsync() {
+		return vsync;
+	}
+
+	public void setVsync(boolean vsync) {
+		this.vsync = vsync;
+	}
+
+	public int getBga() {
+		return bga;
+	}
+
+	public void setBga(int bga) {
+		this.bga = bga;
+	}
+
+	public AudioConfig getAudioConfig() {
+		return audio;
+	}
+
+	public void setAudioConfig(AudioConfig audio) {
+		this.audio = audio;
+	}
+
+	public int getMaxFramePerSecond() {
+		return maxFramePerSecond;
+	}
+
+	public void setMaxFramePerSecond(int maxFramePerSecond) {
+		this.maxFramePerSecond = maxFramePerSecond;
+	}
+
+	public int getPrepareFramePerSecond() {
+		return prepareFramePerSecond;
+	}
+
+	public void setPrepareFramePerSecond(int prepareFramePerSecond) {
+		this.prepareFramePerSecond = prepareFramePerSecond;
+	}
+
+	public String[] getBmsroot() {
+		return bmsroot;
+	}
+
+	public void setBmsroot(String[] bmsroot) {
+		this.bmsroot = bmsroot;
+	}
+
+	public String[] getTableURL() {
+		return tableURL;
+	}
+
+	public void setTableURL(String[] tableURL) {
+		this.tableURL = tableURL;
+	}
+
+	public boolean isFolderlamp() {
+		return folderlamp;
+	}
+
+	public void setFolderlamp(boolean folderlamp) {
+		this.folderlamp = folderlamp;
+	}
+
+	public Resolution getResolution() {
+		return resolution;
+	}
+
+	public void setResolution(Resolution resolution) {
+		this.resolution = resolution;
+	}
+
+	public int getWindowWidth() {
+		return windowWidth;
+	}
+
+	public void setWindowWidth(int width) {
+		this.windowWidth = width;
+	}
+
+	public int getWindowHeight() {
+		return windowHeight;
+	}
+
+	public void setWindowHeight(int height) {
+		this.windowHeight = height;
+	}
+
+	public int getFrameskip() {
+		return frameskip;
+	}
+
+	public void setFrameskip(int frameskip) {
+		this.frameskip = frameskip;
+	}
+
+	public String getBgmpath() {
+		return bgmpath;
+	}
+
+	public void setBgmpath(String bgmpath) {
+		this.bgmpath = bgmpath;
+	}
+
+	public String getSoundpath() {
+		return soundpath;
+	}
+
+	public void setSoundpath(String soundpath) {
+		this.soundpath = soundpath;
+	}
+
+	public int getMaxSearchBarCount() {
+	    return maxSearchBarCount;
+    }
+
+    public void setMaxSearchBarCount(int maxSearchBarCount) {
+	    this.maxSearchBarCount = maxSearchBarCount;
+    }
+
+	public boolean isShowNoSongExistingBar() {
+		return showNoSongExistingBar;
+	}
+
+	public void setShowNoSongExistingBar(boolean showNoExistingSongBar) {
+		this.showNoSongExistingBar = showNoExistingSongBar;
+	}
+
+	public int getScrollDurationLow(){
+		return scrolldurationlow;
+	}
+	public void setScrollDutationLow(int scrolldurationlow){
+		this.scrolldurationlow = scrolldurationlow;
+	}
+	public int getScrollDurationHigh(){
+		return scrolldurationhigh;
+	}
+	public void setScrollDutationHigh(int scrolldurationhigh){
+		this.scrolldurationhigh = scrolldurationhigh;
+	}
+
+    public boolean isAnalogScroll() {
+        return analogScroll;
+    }
+    public void setAnalogScroll(boolean analogScroll) {
+        this.analogScroll = analogScroll;
+    }
+
+    public int getAnalogTicksPerScroll() {
+        return analogTicksPerScroll;
+    }
+    public void setAnalogTicksPerScroll(int analogTicksPerScroll) {
+        this.analogTicksPerScroll = Math.max(analogTicksPerScroll, 1);
+    }
+
+	public SongPreview getSongPreview() {
+		return songPreview;
+	}
+
+	public void setSongPreview(SongPreview songPreview) {
+		this.songPreview = songPreview;
+	}
+
+	public boolean isUseSongInfo() {
+		return useSongInfo;
+	}
+
+	public void setUseSongInfo(boolean useSongInfo) {
+		this.useSongInfo = useSongInfo;
+	}
+
+	public int getBgaExpand() {
+		return bgaExpand;
+	}
+
+	public void setBgaExpand(int bgaExpand) {
+		this.bgaExpand = bgaExpand;
+	}
+
+	public boolean isCacheSkinImage() {
+		return cacheSkinImage;
+	}
+
+	public void setCacheSkinImage(boolean cacheSkinImage) {
+		this.cacheSkinImage = cacheSkinImage;
+	}
+
+
+	
+	public boolean isSetClipboardWhenScreenshot() {
+		return setClipboardScreenshot;
+	}
+
+	public void setClipboardWhenScreenshot(boolean setClipboardScreenshot) {
+		this.setClipboardScreenshot = setClipboardScreenshot;
+	}
+
+	public boolean isUpdatesong() {
+		return updatesong;
+	}
+
+	public void setUpdatesong(boolean updatesong) {
+		this.updatesong = updatesong;
+	}
+
+	public boolean isScanSongArchives() {
+		return scanSongArchives;
+	}
+
+	public void setScanSongArchives(boolean scanSongArchives) {
+		this.scanSongArchives = scanSongArchives;
+	}
+
+	public SongArchiveExtractMode getSongArchiveExtractMode() {
+		return songArchiveExtractMode;
+	}
+
+	public void setSongArchiveExtractMode(SongArchiveExtractMode songArchiveExtractMode) {
+		this.songArchiveExtractMode = songArchiveExtractMode;
+	}
+
+	public DisplayMode getDisplaymode() {
+		return displaymode;
+	}
+
+	public void setDisplaymode(DisplayMode displaymode) {
+		this.displaymode = displaymode;
+	}
+
+	public int getSkinPixmapGen() {
+		return skinPixmapGen;
+	}
+
+	public void setSkinPixmapGen(int skinPixmapGen) {
+		this.skinPixmapGen = skinPixmapGen;
+	}
+
+	public int getStagefilePixmapGen() {
+		return stagefilePixmapGen;
+	}
+
+	public void setStagefilePixmapGen(int stagefilePixmapGen) {
+		this.stagefilePixmapGen = stagefilePixmapGen;
+	}
+
+	public int getBannerPixmapGen() {
+		return bannerPixmapGen;
+	}
+
+	public void setBannerPixmapGen(int bannerPixmapGen) {
+		this.bannerPixmapGen = bannerPixmapGen;
+	}
+
+	public int getSongResourceGen() {
+		return songResourceGen;
+	}
+
+	public void setSongResourceGen(int songResourceGen) {
+		this.songResourceGen = songResourceGen;
+	}
+
+	public boolean isEnableIpfs() {
+		return enableIpfs;
+	}
+
+	public void setEnableIpfs(boolean enableIpfs) {
+		this.enableIpfs = enableIpfs;
+	}
+
+	public String getIpfsUrl() {
+		return ipfsurl;
+	}
+
+	public void setIpfsUrl(String ipfsUrl) {
+		this.ipfsurl = ipfsUrl;
+	}
+
+	public String getSongpath() {
+		return songpath;
+	}
+
+	public void setSongpath(String songpath) {
+		this.songpath = songpath;
+	}
+
+	public String getSonginfopath() {
+		return songinfopath;
+	}
+
+	public void setSonginfopath(String songinfopath) {
+		this.songinfopath = songinfopath;
+	}
+
+	public String getTablepath() {
+		return tablepath;
+	}
+
+	public void setTablepath(String tablepath) {
+		this.tablepath = tablepath;
+	}
+
+	public String getPlayerpath() {
+		return playerpath;
+	}
+
+	public void setPlayerpath(String playerpath) {
+		this.playerpath = playerpath;
+	}
+
+	public String getSkinpath() {
+		return skinpath;
+	}
+
+	public void setSkinpath(String skinpath) {
+		this.skinpath = skinpath;
+	}
+
+	public String getSystemfontpath() {
+		return systemfontpath;
+	}
+
+	public void setSystemfontpath(String systemfontpath) {
+		this.systemfontpath = systemfontpath;
+	}
+
+	public String getMessagefontpath() {
+		return messagefontpath;
+	}
+
+	public void setMessagefontpath(String messagefontpath) {
+		this.messagefontpath = messagefontpath;
+	}
+
+	public boolean validate() {
+		displaymode = (displaymode != null) ? displaymode : DisplayMode.WINDOW;
+		resolution = (resolution != null) ? resolution : Resolution.HD;
+
+		windowWidth = MathUtils.clamp(windowWidth, Resolution.SD.width, Resolution.ULTRAHD.width);
+		windowHeight = MathUtils.clamp(windowHeight, Resolution.SD.height, Resolution.ULTRAHD.height);
+
+		if(audio == null) {
+			audio = new AudioConfig();
+		}
+		audio.validate();
+		maxFramePerSecond = MathUtils.clamp(maxFramePerSecond, 0, 50000);
+		prepareFramePerSecond = MathUtils.clamp(prepareFramePerSecond, 0, 100000);
+        maxSearchBarCount = MathUtils.clamp(maxSearchBarCount, 1, 100);
+		songPreview = (songPreview != null) ? songPreview : SongPreview.LOOP;
+		songArchiveExtractMode = (songArchiveExtractMode != null) ? songArchiveExtractMode
+				: SongArchiveExtractMode.NO_TEMPORARY_FILES;
+
+		scrolldurationlow = MathUtils.clamp(scrolldurationlow, 2, 1000);
+		scrolldurationhigh = MathUtils.clamp(scrolldurationhigh, 1, 1000);
+		analogTicksPerScroll = MathUtils.clamp(analogTicksPerScroll, 1, 1000);
+		irSendCount = MathUtils.clamp(irSendCount, 1, 100);
+		frameskip = MathUtils.clamp(frameskip, 0, 10);
+
+		skinPixmapGen = MathUtils.clamp(skinPixmapGen, 0, 100);
+		stagefilePixmapGen = MathUtils.clamp(stagefilePixmapGen, 0, 100);
+		bannerPixmapGen = MathUtils.clamp(bannerPixmapGen, 0, 100);
+		songResourceGen = MathUtils.clamp(songResourceGen, 0, 100);
+
+		bmsroot = sanitizePathList(bmsroot);
+		tableURL = sanitizeTextList(tableURL, DEFAULT_TABLEURL);
+
+		bga = MathUtils.clamp(bga, 0, 2);
+		bgaExpand = MathUtils.clamp(bgaExpand, 0, 2);
+		if (ipfsurl == null || ipfsurl.isBlank() || ipfsurl.length() > MAX_CONFIG_PATH_LENGTH) {
+			ipfsurl = "https://gateway.ipfs.io/";
+		}
+
+		songpath = sanitizePath(songpath, SONGPATH_DEFAULT);
+		songinfopath = sanitizePath(songinfopath, SONGINFOPATH_DEFAULT);
+		tablepath = sanitizePath(tablepath, TABLEPATH_DEFAULT);
+		playerpath = sanitizePath(playerpath, PLAYERPATH_DEFAULT);
+		skinpath = sanitizePath(skinpath, SKINPATH_DEFAULT);
+		bgmpath = sanitizeOptionalPath(bgmpath, "bgm");
+		soundpath = sanitizeOptionalPath(soundpath, "sound");
+		systemfontpath = sanitizePath(systemfontpath, "font/VL-Gothic-Regular.ttf");
+		messagefontpath = sanitizePath(messagefontpath, "font/VL-Gothic-Regular.ttf");
+		playername = PlayerConfig.isValidPlayerId(playername) ? playername : "player1";
+		return true;
+	}
+
+	static boolean isUsablePath(String value) {
+		if (value == null || value.isBlank() || value.length() > MAX_CONFIG_PATH_LENGTH) {
+			return false;
+		}
+		try {
+			Paths.get(value);
+			return true;
+		} catch (InvalidPathException e) {
+			return false;
+		}
+	}
+
+	private static String sanitizePath(String value, String defaultValue) {
+		return isUsablePath(value) ? value : defaultValue;
+	}
+
+	private static String sanitizeOptionalPath(String value, String defaultValue) {
+		return value != null && value.isEmpty() ? value : sanitizePath(value, defaultValue);
+	}
+
+	private static String[] sanitizePathList(String[] values) {
+		if (values == null) {
+			return new String[0];
+		}
+		return java.util.Arrays.stream(values)
+				.limit(MAX_CONFIG_LIST_ENTRIES)
+				.filter(Config::isUsablePath)
+				.toArray(String[]::new);
+	}
+
+	private static String[] sanitizeTextList(String[] values, String[] defaultValues) {
+		if (values == null) {
+			return defaultValues.clone();
+		}
+		return java.util.Arrays.stream(values)
+				.limit(MAX_CONFIG_LIST_ENTRIES)
+				.filter(value -> value != null && !value.isBlank() && value.length() <= MAX_CONFIG_PATH_LENGTH)
+				.toArray(String[]::new);
+	}
+
+	public static Config read() {
+		Config config = null;
+		if (Files.exists(configpath)) {
+			config = read(configpath, StandardCharsets.UTF_8);
+		} else if(Files.exists(configpath_old)) {
+			// 旧コンフィグ読み込み。そのうち削除
+			config = read(configpath_old, StandardCharsets.UTF_8);
+		}
+		if(config == null) {
+			config = new Config();
+		}
+		config.validate();
+
+		PlayerConfig.init(config);
+
+		return config;
+	}
+
+	private static Config read(Path path, java.nio.charset.Charset charset) {
+		try {
+			if (!Files.isRegularFile(path) || Files.size(path) > MAX_CONFIG_FILE_SIZE) {
+				Logger.getGlobal().warning("System config is not a regular file or exceeds " + MAX_CONFIG_FILE_SIZE + " bytes: " + path);
+				return null;
+			}
+			Json json = new Json();
+			json.setIgnoreUnknownFields(true);
+			JsonValue values = new JsonReader().parse(Files.readString(path, charset));
+			Config config = json.readValue(Config.class, values);
+			if (!values.has("scanSongArchives") && values.has("zipSongArchives")) {
+				config.setScanSongArchives(values.getBoolean("zipSongArchives", false));
+			}
+			return config;
+		} catch (Exception e) {
+			Logger.getGlobal().warning("Failed to read system config " + path + ": " + e.getMessage());
+			return null;
+		}
+	}
+
+	public static void write(Config config) {
+		if (config == null) {
+			return;
+		}
+		config.validate();
+		Json json = new Json();
+		json.setUsePrototypes(false);
+		json.setOutputType(OutputType.json);
+		try (Writer writer = new OutputStreamWriter(new FileOutputStream(configpath.toFile()), StandardCharsets.UTF_8)) {
+			writer.write(json.prettyPrint(config));
+			writer.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public int getIrSendCount() {
+		return irSendCount;
+	}
+
+	public void setIrSendCount(int irSendCount) {
+		this.irSendCount = irSendCount;
+	}
+
+	public boolean isUseResolution() {
+		return useResolution;
+	}
+
+	public void setUseResolution(boolean useResolution) {
+		this.useResolution = useResolution;
+	}
+
+	public enum DisplayMode {
+		FULLSCREEN,BORDERLESS,WINDOW;
+	}
+
+	public enum SongPreview {
+		NONE,ONCE,LOOP;
+	}
+
+	public enum SongArchiveExtractMode {
+		NO_TEMPORARY_FILES, TEMPORARY, SONG_DIRECTORY;
+	}
+}

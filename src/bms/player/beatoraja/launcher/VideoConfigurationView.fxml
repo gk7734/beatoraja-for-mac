@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import bms.player.beatoraja.launcher.NumericSpinner?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+<ScrollPane fitToWidth="true" xmlns="http://javafx.com/javafx/27" xmlns:fx="http://javafx.com/fxml/1" fx:controller="bms.player.beatoraja.launcher.VideoConfigurationView">
+ <VBox spacing="14">
+  <padding><Insets top="4" right="10" bottom="16" left="10"/></padding>
+  <Label text="화면" styleClass="setting-heading"/>
+  <VBox styleClass="setting-section">
+   <HBox styleClass="setting-row"><Label text="%DISPLAYMODE"/><Region HBox.hgrow="ALWAYS"/><ComboBox fx:id="displayMode" onAction="#updateResolutions" prefWidth="210"/></HBox>
+   <Separator/>
+   <HBox styleClass="setting-row"><Label text="%RESOLUTION"/><Region HBox.hgrow="ALWAYS"/><ComboBox fx:id="resolution" prefWidth="210"/></HBox>
+   <Separator/>
+   <HBox styleClass="setting-row"><Label text="%VSYNC"/><Region HBox.hgrow="ALWAYS"/><CheckBox fx:id="vSync"/></HBox>
+   <Separator/>
+   <HBox styleClass="setting-row"><Label text="%MAXFPS"/><Region HBox.hgrow="ALWAYS"/><NumericSpinner fx:id="maxFps" editable="true" prefWidth="150"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory min="0" max="10000" initialValue="240"/></valueFactory></NumericSpinner></HBox>
+  </VBox>
+  <Label text="배경 영상" styleClass="setting-heading"/>
+  <VBox styleClass="setting-section">
+   <HBox styleClass="setting-row"><Label text="배경 영상 재생"/><Region HBox.hgrow="ALWAYS"/><ComboBox fx:id="bgaOp" prefWidth="210"><items><FXCollections fx:factory="observableArrayList"><String fx:value="사용"/><String fx:value="자동"/><String fx:value="사용 안 함"/></FXCollections></items></ComboBox></HBox>
+   <Separator/>
+   <HBox styleClass="setting-row"><Label text="%BGA_EXPAND"/><Region HBox.hgrow="ALWAYS"/><ComboBox fx:id="bgaExpand" prefWidth="210"><items><FXCollections fx:factory="observableArrayList"><String fx:value="화면에 맞춤"/><String fx:value="비율 유지"/><String fx:value="사용 안 함"/></FXCollections></items></ComboBox></HBox>
+   <Separator/>
+   <HBox styleClass="setting-row"><Label text="%MISSLAYER_DURATION"/><Region HBox.hgrow="ALWAYS"/><NumericSpinner fx:id="missLayerTime" editable="true" prefWidth="150"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory min="0" max="10000" initialValue="500"/></valueFactory></NumericSpinner></HBox>
+  </VBox>
+ </VBox>
+</ScrollPane>
