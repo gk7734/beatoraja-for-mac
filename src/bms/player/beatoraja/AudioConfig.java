@@ -196,6 +196,7 @@ public class AudioConfig implements Validatable {
 		 * AudioDevice (libGDX AudioDevice)
 		 */
 		AudioDevice,
+        CoreAudio,
 	}
 	
 	public enum FrequencyType {

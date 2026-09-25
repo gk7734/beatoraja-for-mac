@@ -231,7 +231,8 @@ struct SettingsPage: View {
     var audio: some View {
         Group {
             Section("출력") {
-                choice("오디오 출력", "s.audio.driver", [("OpenAL","OpenAL"),("PortAudio","Core Audio (PortAudio)")])
+                choice("오디오 출력", "s.audio.driver", [("CoreAudio","Apple Core Audio"),("OpenAL","OpenAL"),("PortAudio","Core Audio (PortAudio)")])
+                if store.value("s.audio.driver") as? String == "CoreAudio" { Text("macOS 기본 출력 장치를 사용합니다. 출력 장치는 시스템 설정에서 변경할 수 있습니다.").font(.caption).foregroundStyle(.secondary) }
                 if store.value("s.audio.driver") as? String == "PortAudio" { TextField("출력 장치 이름 (비워 두면 기본 장치)", text: store.text("s.audio.driverName")) }
                 choice("샘플 레이트", "s.audio.sampleRate", [("0","장치 기본값"),("44100","44,100 Hz"),("48000","48,000 Hz"),("96000","96,000 Hz"),("192000","192,000 Hz")], numeric: true)
                 number("오디오 버퍼 크기", "s.audio.deviceBufferSize", 32...16384, step: 32)

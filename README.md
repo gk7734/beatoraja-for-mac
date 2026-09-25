@@ -38,6 +38,25 @@ BEATORAJA_JDK=/path/to/jdk/Contents/Home bash macos/build-app.sh
 앱을 열고 라이브러리에서 BMS 곡 폴더를 추가한 뒤 곡 검색을 실행하세요. 곡 파일은 포함하지 않습니다.
 설정과 플레이 기록은 `~/Library/Application Support/beatoraja`에 저장됩니다.
 
+## Apple Core Audio 출력
+
+런처의 **오디오 → 오디오 출력 → Apple Core Audio**에서 선택합니다.
+Apple Audio Queue Services에 JNI로 직접 연결하며, macOS 기본 출력 장치를 사용합니다.
+`장치 기본값`은 시작 시 기본 출력 장치의 샘플 레이트를 조회합니다.
+기존 OpenAL/PortAudio 설정은 그대로 유지되므로 새 출력 방식을 직접 선택해야 합니다.
+
+PCM 믹싱은 기존 Java 믹서를 사용하고, 네이티브 콜백은 JVM에 진입하지 않고 버퍼를 반환합니다.
+버퍼는 3개이며 설정값은 버퍼당 프레임 수입니다. 실제 왕복 지연은 측정하지 않았습니다.
+출력 장치 변경 후에는 게임을 다시 시작하세요. 이 구현은 Audio Unit/HAL 저지연 전용 백엔드는 아닙니다.
+
+빌드 후 실제 기본 출력 장치에 무음만 보내는 테스트:
+
+```sh
+JDK=/path/to/jdk/Contents/Home
+"$JDK/bin/javac" -cp '../.build/package-build/classes:lib/*' -d ../.build/package-build/test-classes macos/tests/CoreAudioSmokeTest.java
+"$JDK/bin/java" --enable-native-access=ALL-UNNAMED -Djava.library.path=../.build/package-build/input/natives -cp '../.build/package-build/test-classes:../.build/package-build/classes:lib/*' CoreAudioSmokeTest
+```
+
 ## 라이선스
 
 원본의 GNU GPL v3 라이선스와 저작자 표기를 유지합니다. [LICENSE](LICENSE)를 참고하세요.

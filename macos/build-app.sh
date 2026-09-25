@@ -33,6 +33,9 @@ for name in ['lib','natives','skin','font','defaultsound','folder','random']:
 shutil.copy2(p/'LICENSE',b/'input/LICENSE')
 shutil.copy2(p/'CREDITS.md',b/'input/CREDITS.md')
 PY
+xcrun clang -arch arm64 -mmacosx-version-min=14.0 -O2 -Wall -Wextra -Wno-unused-parameter -dynamiclib \
+ -I"$JDK/include" -I"$JDK/include/darwin" "$PROJECT/macos/audio/CoreAudio.c" \
+ -framework AudioToolbox -framework CoreAudio -framework CoreFoundation -o "$BUILD/input/natives/libbeatoraja_coreaudio.dylib"
 "$JDK/bin/jar" --create --file "$BUILD/input/beatoraja.jar" --manifest "$BUILD/MANIFEST.MF" -C "$BUILD/classes" .
 if [ ! -d "$BUILD/runtime" ]; then
  "$JDK/bin/jlink" --add-modules java.se,jdk.unsupported,jdk.jfr,jdk.charsets,javafx.controls,javafx.fxml,javafx.swing --strip-debug --no-header-files --no-man-pages --output "$BUILD/runtime"
