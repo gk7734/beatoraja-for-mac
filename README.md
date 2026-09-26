@@ -29,7 +29,7 @@ Apple Silicon Mac, Xcode Command Line Tools, JavaFX가 포함된 ARM64 JDK 27이
 BEATORAJA_JDK=/path/to/jdk/Contents/Home bash macos/build-app.sh
 ```
 
-완성된 앱과 ZIP은 기본적으로 프로젝트 상위 폴더에 생성됩니다.
+완성된 앱, ZIP, 설치 DMG는 기본적으로 프로젝트 상위 폴더에 생성됩니다.
 `BEATORAJA_BUILD_DIR`, `BEATORAJA_OUTPUT_DIR`, `BEATORAJA_MACOS_SDK`로 경로를 지정할 수 있습니다.
 앱은 로컬 임시 서명을 사용하며 Apple 공증은 포함하지 않습니다. 실제 테스트 환경은 macOS 27 / Apple Silicon입니다.
 

@@ -73,3 +73,5 @@ COPY
 ditto -c -k --norsrc --keepParent "$APP" "$DEST/beatoraja-AppleSilicon.zip"
 printf '%s\n' "$APP" > "$BUILD/staged-app.txt"
 printf 'Built %s\n' "$DEST/beatoraja-AppleSilicon.zip"
+
+BEATORAJA_BUILD_DIR="$BUILD" BEATORAJA_OUTPUT_DIR="$DEST" bash "$PROJECT/macos/build-dmg.sh"
