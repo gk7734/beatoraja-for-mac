@@ -62,6 +62,7 @@ public class SkinLuaAccessor {
 
 		globals.finder = new SkinResourceFinder(this.sandboxRoot);
 		restrictPackageLoaders();
+        LegacySkinLuaApi.installForHeader(globals);
 		initializeModules();
 	}
 
@@ -110,6 +111,7 @@ public class SkinLuaAccessor {
 		sandbox.load(new StringLib());
 		sandbox.load(new CoroutineLib());
 		sandbox.load(new MathLib());
+        sandbox.load(new OsLib());
 		sandbox.load(new SandboxIoLib(sandboxRoot));
 		LoadState.install(sandbox);
 		LuaC.install(sandbox);
@@ -117,7 +119,12 @@ public class SkinLuaAccessor {
 	}
 
 	private void restrictPackageLoaders() {
-		globals.set("os", LuaValue.NIL);
+		LuaTable clock = new LuaTable();
+        for (String name : new String[] {"date", "time", "difftime", "clock"}) {
+            clock.set(name, globals.get("os").get(name));
+        }
+        globals.set("os", clock);
+        globals.package_.setIsLoaded("os", clock);
 		globals.set("luajava", LuaValue.NIL);
 		globals.set("debug", LuaValue.NIL);
 
