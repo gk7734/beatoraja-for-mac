@@ -58,6 +58,7 @@ struct SettingSearchItem: Identifiable {
         .init(page: .select, title: "스크롤 대기 시간(ms)"),
         .init(page: .select, title: "빠른 스크롤 간격(ms)"),
         .init(page: .input, title: "입력 간격(ms)"),
+        .init(page: .input, title: "숫자 기능 키 · 서브키"),
         .init(page: .input, title: "마우스 스크래치 사용"),
         .init(page: .input, title: "이동 거리"),
         .init(page: .input, title: "인식 시간(ms)"),

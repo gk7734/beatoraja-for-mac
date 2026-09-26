@@ -113,10 +113,58 @@ struct ControllerSettings: View {
         ForEach(controllers.indices, id: \.self) { i in
             Text("\(i + 1)P 컨트롤러").font(.headline)
             TextField("장치 이름", text: binding(i,"name",""))
+            NumericSubkeys(mode: mode, controller: i)
             Toggle("아날로그 스크래치", isOn: binding(i,"analogScratch",false))
             Stepper("스크래치 인식 기준: \(controllers[i]["analogScratchThreshold"] as? Int ?? 100)", value: binding(i,"analogScratchThreshold",100), in: 1...1000)
             Picker("스크래치 방식", selection: binding(i,"analogScratchMode",0)) { Text("기본").tag(0); Text("방식 2").tag(1) }
             Stepper("입력 간격(ms): \(controllers[i]["duration"] as? Int ?? 16)", value: binding(i,"duration",16), in: 0...100)
+        }
+    }
+}
+
+
+struct NumericSubkeys: View {
+    @EnvironmentObject var store: SettingsStore
+    let mode: String
+    let controller: Int?
+    private let labels = ["", "키 모드", "정렬", "롱노트 모드", "리플레이 전환", "옵션", "키 설정", "라이벌", "같은 폴더", "곡 설명"]
+    private var path: String { "p.\(mode).keyboard.controlKeys" }
+    private var controllers: [[String: Any]] { store.value("p.\(mode).controller") as? [[String: Any]] ?? [] }
+    private var codes: [Int] {
+        if let controller, controllers.indices.contains(controller) { return controllers[controller]["controlKeys"] as? [Int] ?? [] }
+        return store.value(path) as? [Int] ?? []
+    }
+    private func binding(_ number: Int) -> Binding<Int> {
+        Binding(get: { codes.indices.contains(number) ? codes[number] : -1 }, set: { value in
+            var updated = codes
+            while updated.count < 10 { updated.append(-1) }
+            updated[number] = value
+            if let controller {
+                var all = controllers
+                guard all.indices.contains(controller) else { return }
+                all[controller]["controlKeys"] = updated
+                store.set("p.\(mode).controller", all)
+            } else { store.set(path, updated) }
+        })
+    }
+    var body: some View {
+        DisclosureGroup(controller == nil ? "숫자 기능 키 · 키보드 서브키" : "숫자 기능 키 · 컨트롤러 서브키") {
+            Text("기존 숫자 1~9와 추가 지정 키가 같은 기능으로 동작합니다. 선택한 키 모드별로 저장됩니다.")
+                .font(.caption).foregroundStyle(.secondary)
+            ForEach(1...9, id: \.self) { number in
+                Picker("\(number) · \(labels[number])", selection: binding(number)) {
+                    if controller != nil {
+                        Text("미지정").tag(-1)
+                        ForEach(0..<28, id: \.self) { Text("버튼 \($0 + 1)").tag($0) }
+                    } else {
+                        ForEach(KeyBindings.special + (29...54).map { ($0, KeyBindings.name($0)) }, id: \.0) {
+                            Text($0.1).tag($0.0)
+                        }
+                    }
+                }
+            }
+            Text("플레이 키·시작·선택과 같은 키를 지정하면 두 기능이 함께 동작할 수 있습니다.")
+                .font(.caption).foregroundStyle(.secondary)
         }
     }
 }

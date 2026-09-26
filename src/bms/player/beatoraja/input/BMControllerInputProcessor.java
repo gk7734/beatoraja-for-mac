@@ -33,6 +33,7 @@ public class BMControllerInputProcessor extends BMSPlayerInputDevice {
 	/**
 	 * スタートキーアサイン
 	 */
+	private int[] controlKeys = NumericControlKeys.bindings(null, BMKeys.MAXID - 1);
 	private int start = BMKeys.BUTTON_9;
 	/**
 	 * セレクトキーアサイン
@@ -90,6 +91,7 @@ public class BMControllerInputProcessor extends BMSPlayerInputDevice {
 
 	public void setConfig(ControllerConfig controllerConfig) {
 		this.buttons = controllerConfig.getKeyAssign().clone();
+        this.controlKeys = NumericControlKeys.bindings(controllerConfig.getControlKeys(), BMKeys.MAXID - 1);
 		this.start = controllerConfig.getStart();
 		this.select = controllerConfig.getSelect();
 		this.duration = controllerConfig.getDuration();
@@ -236,6 +238,11 @@ public class BMControllerInputProcessor extends BMSPlayerInputDevice {
             return analogScratchAlgorithm[axisIndex].analogScratchInput(axis[axisIndex], plus);
 		}
 	}
+
+    boolean numericControlDown(int number) {
+        int button = controlKeys[number];
+        return enabled && controller.isConnected() && button >= 0 && buttonstate[button];
+    }
 
 	public int getLastPressedButton() {
 		return lastPressedButton;

@@ -56,6 +56,7 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	 * キーの最少入力間隔(ms)
 	 */
 	private int duration;
+    private int[] controlKeys = NumericControlKeys.bindings(null, 255);
 
 	public KeyBoardInputProcesseor(BMSPlayerInputProcessor bmsPlayerInputProcessor, KeyboardConfig config, Resolution resolution) {
 		super(bmsPlayerInputProcessor, Type.KEYBOARD);
@@ -71,6 +72,7 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 
 	public void setConfig(KeyboardConfig config) {
 		this.keys = config.getKeyAssign().clone();
+        this.controlKeys = NumericControlKeys.bindings(config.getControlKeys(), 255);
 		this.duration = config.getDuration();
 		this.control = new int[] { config.getStart(), config.getSelect() };
 		mouseScratchInput.setConfig(config);
@@ -135,13 +137,21 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		mouseScratchInput.poll(microtime);
 	}
 
-	private int currentlyHeldModifiers() {
+	int currentlyHeldModifiers() {
 		boolean shift = Gdx.input.isKeyPressed(Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Keys.SHIFT_RIGHT);
 		boolean ctrl = Gdx.input.isKeyPressed(Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Keys.CONTROL_RIGHT);
 		boolean alt = Gdx.input.isKeyPressed(Keys.ALT_LEFT) || Gdx.input.isKeyPressed(Keys.ALT_RIGHT);
 		return (shift ? MASK_SHIFT : 0) | (ctrl ? MASK_CTRL : 0) | (alt ? MASK_ALT : 0);
 	}
 
+
+    boolean numericControlDown(int number) {
+        if (textmode) return false;
+        int alternate = controlKeys[number];
+        return Gdx.input.isKeyPressed(Keys.NUM_0 + number)
+                || (alternate >= 0 && Gdx.input.isKeyPressed(alternate));
+    }
+    boolean acceptsNumericControls() { return !textmode; }
 
 	public boolean getKeyState(int keycode) {
 		return keystate[keycode];
