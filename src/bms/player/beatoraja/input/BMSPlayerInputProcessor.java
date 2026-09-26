@@ -23,7 +23,6 @@ import com.badlogic.gdx.utils.Array;
 public class BMSPlayerInputProcessor {
 	
 	private boolean enable = true;
-    private final NumericControlKeys numericControls = new NumericControlKeys();
 
 	private KeyBoardInputProcesseor kbinput;
 
@@ -223,7 +222,6 @@ public class BMSPlayerInputProcessor {
 	 * 全てのキー状態をリセットする
 	 */
 	public void resetAllKeyState() {
-        numericControls.clear();
 		Arrays.fill(keystate, false);
 		Arrays.fill(time, Long.MIN_VALUE);
 	}
@@ -253,6 +251,10 @@ public class BMSPlayerInputProcessor {
 		}
 		
 		int kbcount = setPlayConfig0(kbkeys,  exclusive);
+        int[] secondary = playconfig.getKeyboardConfig().getSecondaryKeyAssign();
+        for (int i = 0; i < secondary.length; i++) {
+            if (!exclusive[i] && secondary[i] >= 0) { exclusive[i] = true; kbcount++; }
+        }
 		
 		int[][] cokeys = new int[playconfig.getController().length][];
 		int cocount = 0;
@@ -314,16 +316,15 @@ public class BMSPlayerInputProcessor {
 	}
 	
 	public boolean getControlKeyState(ControlKeys key) {
-		return key.id >= 1 && key.id <= 9 ? numericControls.isDown(key.id) : kbinput.getKeyState(key.keycode);
+		return kbinput.getKeyState(key.keycode);
 	}
 
 	public boolean isControlKeyPressed(ControlKeys key) {
-		return key.id >= 1 && key.id <= 9 ? numericControls.consume(key.id, 0) : kbinput.isKeyPressed(key.keycode);
+		return kbinput.isKeyPressed(key.keycode);
 	}
 
 	public boolean isControlKeyPressed(ControlKeys key, int heldModifiers, int... notHeldModifiers) {
-		return key.id >= 1 && key.id <= 9 ? numericControls.consume(key.id, heldModifiers, notHeldModifiers)
-                : kbinput.isKeyPressed(key.keycode, heldModifiers, notHeldModifiers);
+		return kbinput.isKeyPressed(key.keycode, heldModifiers, notHeldModifiers);
 	}
 	
 	protected void keyChanged(BMSPlayerInputDevice device, long presstime, int i, boolean pressed) {
@@ -511,14 +512,6 @@ public class BMSPlayerInputProcessor {
 		for (BMControllerInputProcessor controller : bminput) {
 			controller.poll(now);
 		}
-        for (int number = 1; number <= 9; number++) {
-            boolean pressed = kbinput.numericControlDown(number);
-            if (kbinput.acceptsNumericControls()) {
-                for (BMControllerInputProcessor controller : bminput)
-                    pressed |= controller.numericControlDown(number);
-            }
-            numericControls.update(number, pressed, kbinput.currentlyHeldModifiers());
-        }
 	}
 
 	public void dispose() {

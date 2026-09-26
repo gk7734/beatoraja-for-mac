@@ -256,10 +256,11 @@ public final class PlayModeConfig {
      * @author exch
      */
     public static final class KeyboardConfig {
-        /** Optional alternate bindings for numeric function keys; absent means unassigned. */
-        private int[] controlKeys;
-        public int[] getControlKeys() { return controlKeys; }
-        public void setControlKeys(int[] keys) { controlKeys = keys; }
+        private int[] secondaryKeys;
+        public int[] getSecondaryKeyAssign() {
+            return bms.player.beatoraja.input.KeyboardLaneBindings.normalize(secondaryKeys, keys.length);
+        }
+        public void setSecondaryKeyAssign(int[] keys) { secondaryKeys = keys; }
 
         /**
          * マウス皿設定
@@ -487,11 +488,6 @@ public final class PlayModeConfig {
      * @author exch
      */
     public static final class ControllerConfig {
-        /** Optional alternate bindings for numeric function keys; absent means unassigned. */
-        private int[] controlKeys;
-        public int[] getControlKeys() { return controlKeys; }
-        public void setControlKeys(int[] keys) { controlKeys = keys; }
-
 
         public static final int ANALOG_SCRATCH_VER_2 = 0;
         

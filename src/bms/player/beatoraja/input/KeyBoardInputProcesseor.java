@@ -56,7 +56,7 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	 * キーの最少入力間隔(ms)
 	 */
 	private int duration;
-    private int[] controlKeys = NumericControlKeys.bindings(null, 255);
+    private KeyboardLaneBindings laneBindings;
 
 	public KeyBoardInputProcesseor(BMSPlayerInputProcessor bmsPlayerInputProcessor, KeyboardConfig config, Resolution resolution) {
 		super(bmsPlayerInputProcessor, Type.KEYBOARD);
@@ -72,7 +72,7 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 
 	public void setConfig(KeyboardConfig config) {
 		this.keys = config.getKeyAssign().clone();
-        this.controlKeys = NumericControlKeys.bindings(config.getControlKeys(), 255);
+        this.laneBindings = new KeyboardLaneBindings(keys, config.getSecondaryKeyAssign());
 		this.duration = config.getDuration();
 		this.control = new int[] { config.getStart(), config.getSelect() };
 		mouseScratchInput.setConfig(config);
@@ -95,23 +95,18 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		// Arrays.fill(keystate, false);
 		Arrays.fill(keytime, Long.MIN_VALUE);
 		lastPressedKey = -1;
+        laneBindings.clear();
 		mouseScratchInput.clear();
 	}
 
 	public void poll(final long microtime) {
 		if (!textmode) {
-			for (int i = 0; i < keys.length; i++) {
-				if(keys[i] < 0) {
-					continue;
-				}
-				final boolean pressed = Gdx.input.isKeyPressed(keys[i]);
-				if (pressed != keystate[keys[i]] && microtime >= keytime[keys[i]] + duration * 1000) {
-					keystate[keys[i]] = pressed;
-					keytime[keys[i]] = microtime;
-					this.bmsPlayerInputProcessor.keyChanged(this, microtime, i, pressed);
-					this.bmsPlayerInputProcessor.setAnalogState(i, false, 0);
-				}
-			}
+            for (int i = 0; i < keys.length; i++) {
+                if (laneBindings.update(i, microtime, duration * 1000L, Gdx.input::isKeyPressed)) {
+                    this.bmsPlayerInputProcessor.keyChanged(this, microtime, i, laneBindings.isDown(i));
+                    this.bmsPlayerInputProcessor.setAnalogState(i, false, 0);
+                }
+            }
 
 			final boolean startpressed = Gdx.input.isKeyPressed(control[0]);
 			if (startpressed != keystate[control[0]]) {
@@ -137,21 +132,13 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		mouseScratchInput.poll(microtime);
 	}
 
-	int currentlyHeldModifiers() {
+	private int currentlyHeldModifiers() {
 		boolean shift = Gdx.input.isKeyPressed(Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Keys.SHIFT_RIGHT);
 		boolean ctrl = Gdx.input.isKeyPressed(Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Keys.CONTROL_RIGHT);
 		boolean alt = Gdx.input.isKeyPressed(Keys.ALT_LEFT) || Gdx.input.isKeyPressed(Keys.ALT_RIGHT);
 		return (shift ? MASK_SHIFT : 0) | (ctrl ? MASK_CTRL : 0) | (alt ? MASK_ALT : 0);
 	}
 
-
-    boolean numericControlDown(int number) {
-        if (textmode) return false;
-        int alternate = controlKeys[number];
-        return Gdx.input.isKeyPressed(Keys.NUM_0 + number)
-                || (alternate >= 0 && Gdx.input.isKeyPressed(alternate));
-    }
-    boolean acceptsNumericControls() { return !textmode; }
 
 	public boolean getKeyState(int keycode) {
 		return keystate[keycode];

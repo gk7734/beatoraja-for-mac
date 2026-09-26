@@ -281,7 +281,6 @@ struct SettingsPage: View {
             Section { modes }
             Section("키보드") {
                 KeyBindings(mode: mode)
-                NumericSubkeys(mode: mode, controller: nil)
                 number("입력 간격(ms)", "p.\(mode).keyboard.duration", 0...100)
             }
             Section("컨트롤러") { ControllerSettings(mode: mode) }
