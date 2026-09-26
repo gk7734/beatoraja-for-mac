@@ -315,7 +315,7 @@ struct SettingsPage: View {
             Section("게임 스킨") {
                 Picker("화면", selection: $skinIndex) { ForEach([(0,"7키"),(1,"5키"),(2,"14키"),(3,"10키"),(4,"9키"),(5,"곡 선택"),(6,"곡 결정"),(7,"결과"),(8,"키 설정"),(9,"스킨 선택"),(15,"코스 결과"),(16,"24키"),(17,"48키")], id: \.0) { Text($0.1).tag($0.0) } }
                 SkinPath(index: skinIndex)
-                Text("세부 스킨 옵션은 게임의 스킨 설정 화면에서도 조절할 수 있습니다.").font(.caption).foregroundStyle(.secondary)
+                Text("곡 선택 화면에서 F12(필요하면 Fn+F12)를 누르면 세부 스킨 설정을 열 수 있습니다.").font(.caption).foregroundStyle(.secondary)
             }
             Section("사운드") { TextField("배경음 폴더", text: store.text("s.bgmpath")); TextField("효과음 폴더", text: store.text("s.soundpath")) }
         }

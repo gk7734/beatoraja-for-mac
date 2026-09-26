@@ -18,7 +18,7 @@ import com.badlogic.gdx.math.MathUtils;
 
 import static bms.player.beatoraja.SystemSoundManager.SoundType.OPTION_CHANGE;
 
-import java.awt.*;
+import bms.player.beatoraja.external.DesktopIntegration;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -250,14 +250,14 @@ public class EventFactory {
 		 * 楽曲ファイルのドキュメントをOS既定のドキュメントビューアーで開く
 		 */
 		open_document(17, (state) -> {
-			if (!Desktop.isDesktopSupported()) {
+			if (!DesktopIntegration.isSupported()) {
 				return;
 			}
 			if(state instanceof MusicSelector selector && selector.getBarManager().getSelected() instanceof SongBar songbar && songbar.existsSong()) {
 				try (Stream<Path> paths = Files.list(Paths.get(songbar.getSongData().getPath()).getParent())) {
 					paths.filter(p -> !Files.isDirectory(p) && p.toString().toLowerCase().endsWith(".txt")).forEach(p -> {
 						try {
-							Desktop.getDesktop().open(p.toFile());
+							DesktopIntegration.open(p.toFile());
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
@@ -387,7 +387,7 @@ public class EventFactory {
 			if (url != null) {
 				try {
 					URI uri = new URI(url);
-					Desktop.getDesktop().browse(uri);
+					DesktopIntegration.browse(uri);
 				} catch (Throwable e) {
 					e.printStackTrace();
 				}
@@ -418,17 +418,17 @@ public class EventFactory {
 			if(state instanceof MusicSelector selector) {
 				Bar current = selector.getBarManager().getSelected();
 				try {
-					if (Desktop.isDesktopSupported()) {
+					if (DesktopIntegration.isSupported()) {
 						if (current instanceof SongBar songbar) {
 							if (songbar.existsSong()) {
-								Desktop.getDesktop().open(Paths.get(songbar.getSongData().getPath()).getParent().toFile());
+								DesktopIntegration.open(Paths.get(songbar.getSongData().getPath()).getParent().toFile());
 							} else if (songbar.getSongData() != null && songbar.getSongData().getOrg_md5() != null) {
 								String[] md5 = songbar.getSongData().getOrg_md5()
 										.toArray(new String[songbar.getSongData().getOrg_md5().size()]);
 								SongData[] songdata = selector.getSongDatabase().getSongDatas(md5);
 								for (SongData sd : songdata) {
 									if (sd.getPath() != null) {
-										Desktop.getDesktop().open(Paths.get(sd.getPath()).getParent().toFile());
+										DesktopIntegration.open(Paths.get(sd.getPath()).getParent().toFile());
 										break;
 									}
 								}
@@ -438,14 +438,14 @@ public class EventFactory {
 									SongData[] songdata = selector.getSongDatabase().getSongDatasByText(m.group());
 									for (SongData sd : songdata) {
 										if (sd.getPath() != null) {
-											Desktop.getDesktop().open(Paths.get(sd.getPath()).getParent().toFile());
+											DesktopIntegration.open(Paths.get(sd.getPath()).getParent().toFile());
 											break;
 										}
 									}
 								}
 							}
 						} else if (current instanceof FolderBar) {
-							Desktop.getDesktop().open(Paths.get(((FolderBar) current).getFolderData().getPath()).toFile());
+							DesktopIntegration.open(Paths.get(((FolderBar) current).getFolderData().getPath()).toFile());
 						}
 					}
 				} catch (IOException e) {
@@ -465,7 +465,7 @@ public class EventFactory {
 						if (song.getUrl() != null && song.getUrl().length() > 0) {
 							try {
 								URI uri = new URI(song.getUrl());
-								Desktop.getDesktop().browse(uri);
+								DesktopIntegration.browse(uri);
 							} catch (Throwable e) {
 								e.printStackTrace();
 							}
@@ -474,7 +474,7 @@ public class EventFactory {
 								&& !song.getAppendurl().equals(song.getUrl())) {
 							try {
 								URI uri = new URI(song.getAppendurl());
-								Desktop.getDesktop().browse(uri);
+								DesktopIntegration.browse(uri);
 							} catch (Throwable e) {
 								e.printStackTrace();
 							}

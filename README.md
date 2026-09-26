@@ -36,6 +36,7 @@ BEATORAJA_JDK=/path/to/jdk/Contents/Home bash macos/build-app.sh
 ## 실행
 
 앱을 열고 라이브러리에서 BMS 곡 폴더를 추가한 뒤 곡 검색을 실행하세요. 곡 파일은 포함하지 않습니다.
+곡 선택 화면에서 **F12**(필요하면 **Fn+F12**)로 스킨 설정을 엽니다. 숫자 9는 곡 설명 문서, 8은 같은 폴더의 곡, 7은 라이벌 전환입니다.
 설정과 플레이 기록은 `~/Library/Application Support/beatoraja`에 저장됩니다.
 
 ## Apple Core Audio 출력
