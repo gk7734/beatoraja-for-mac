@@ -357,9 +357,16 @@ struct SettingsPage: View {
                 HStack { Text(url).font(.callout).lineLimit(2).textSelection(.enabled); Spacer(); Button { var copy = urls; copy.remove(at: i); store.set("s.tableURL", copy) } label: { Image(systemName: "minus.circle") }.buttonStyle(.borderless).help("주소 제거") }
             }
             HStack { TextField("https://…", text: $tableURL); Button("추가") {
-                if let url = URL(string: tableURL), ["https","http"].contains(url.scheme), !urls.contains(tableURL) { store.set("s.tableURL", urls + [tableURL]); tableURL = "" }
+                let address = tableURL.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let url = URL(string: address), ["https","http"].contains(url.scheme), url.host != nil, !urls.contains(address) {
+                    store.set("s.tableURL", urls + [address]); tableURL = ""
+                    store.run(tables: true, tableURL: address)
+                }
                 else { store.error = "올바른 http 또는 https 주소를 입력해 주세요." }
-            }.disabled(tableURL.isEmpty) }
+            }.disabled(tableURL.isEmpty || store.busy) }
+            Button("난이도표 모두 갱신") { store.run(tables: true) }.disabled(urls.isEmpty || store.busy)
+            Text("주소를 추가하면 표 데이터를 다운로드합니다. 갱신 후 게임을 시작하면 곡 선택에 난이도표 폴더가 나타납니다. 곡 파일은 별도로 필요합니다.")
+                .font(.caption).foregroundStyle(.secondary)
         }
     }
     var stream: some View {
