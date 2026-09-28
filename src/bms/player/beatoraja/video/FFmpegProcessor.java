@@ -6,8 +6,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
+import org.bytedeco.ffmpeg.global.avutil;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber.Exception;
@@ -130,9 +132,11 @@ public class FFmpegProcessor implements VideoProcessor {
 		private boolean eof = true;
 
 		private Pixmap pixmap;
-		private byte[] frameRow;
 		private byte[] movieBytes;
 		private final Object pixmapLock = new Object();
+		/** At most one texture upload is queued; later frames reuse it instead of queueing redundant uploads. */
+		private final AtomicBoolean uploadPending = new AtomicBoolean();
+		private final Runnable upload = this::uploadPixmap;
 
 		private final SongResource resource;
 		
@@ -191,42 +195,26 @@ public class FFmpegProcessor implements VideoProcessor {
 										if (pixmap != null) {
 											pixmap.dispose();
 										}
-										pixmap = new Pixmap(frame.imageWidth, frame.imageHeight, Pixmap.Format.RGB888);
+										// RGBA matches Metal's native layout; RGB888 forces a driver-side conversion on every upload.
+										pixmap = new Pixmap(frame.imageWidth, frame.imageHeight, Pixmap.Format.RGBA8888);
 									}
 									copyFrameToPixmap(frame, pixmap);
 								}
-								Gdx.app.postRunnable(() -> {
-									synchronized (pixmapLock) {
-										final Pixmap p = pixmap;
-										// dispose()を呼び出した後にshowingtexを使えばEXCEPTION_ACCESS_VIOLATIONが発生
-										if (p == null || processorStatus == ProcessorStatus.DISPOSED) {
-											return;
-										}
-										preparePixmapForDraw(p);
-										if (showingtex != null && showingtex.getWidth() == p.getWidth() && showingtex.getHeight() == p.getHeight()) {
-											showingtex.draw(p, 0, 0);
-										} else {
-											if (showingtex != null) {
-												showingtex.dispose();
-											}
-											showingtex = new Texture(p);
-										}
-										processorStatus = ProcessorStatus.TEXTURE_ACTIVE;
-									}
-								});
+								if (uploadPending.compareAndSet(false, true)) {
+									Gdx.app.postRunnable(upload);
+								}
 								// System.out.println("movie pixmap created : " + time);
 							} catch (Throwable e) {
 								throw new GdxRuntimeException("Couldn't load pixmap from image data", e);
 							}
 						}
 					} else {
-						final long sleeptime = (grabber.getTimestamp() - microtime) / 1000 - 1;
-						if (sleeptime > 0) {
-							try {
-								sleep(sleeptime);
-							} catch (InterruptedException e) {
+						// Always yield at least 1ms: waiting on a sub-millisecond gap used to spin this thread.
+						final long sleeptime = Math.max(1, (grabber.getTimestamp() - microtime) / 1000 - 1);
+						try {
+							sleep(sleeptime);
+						} catch (InterruptedException e) {
 
-							}
 						}
 					}
 
@@ -265,6 +253,8 @@ public class FFmpegProcessor implements VideoProcessor {
 
 		private void openGrabber() throws Exception {
 			grabber = new FFmpegFrameGrabber(new ByteArrayInputStream(movieBytes));
+			// BGRA keeps the channel order the ffmpeg shader expects and lets frames be copied with one bulk put.
+			grabber.setPixelFormat(avutil.AV_PIX_FMT_BGRA);
 			grabber.start();
 			while (grabber.getVideoBitrate() < 10) {
 				final int videoStream = grabber.getVideoStream();
@@ -320,45 +310,59 @@ public class FFmpegProcessor implements VideoProcessor {
 			// System.out.println("movie restart - starttime : " + start);
 		}
 
+		private void uploadPixmap() {
+			uploadPending.set(false);
+			synchronized (pixmapLock) {
+				final Pixmap p = pixmap;
+				// dispose()を呼び出した後にshowingtexを使えばEXCEPTION_ACCESS_VIOLATIONが発生
+				if (p == null || processorStatus == ProcessorStatus.DISPOSED) {
+					return;
+				}
+				preparePixmapForDraw(p);
+				if (showingtex != null && showingtex.getWidth() == p.getWidth() && showingtex.getHeight() == p.getHeight()) {
+					showingtex.draw(p, 0, 0);
+				} else {
+					if (showingtex != null) {
+						showingtex.dispose();
+					}
+					showingtex = new Texture(p);
+				}
+				processorStatus = ProcessorStatus.TEXTURE_ACTIVE;
+			}
+		}
+
 		private void copyFrameToPixmap(Frame frame, Pixmap pixmap) {
 			final ByteBuffer source = ((ByteBuffer) frame.image[0]).duplicate();
 			final ByteBuffer pixels = pixmap.getPixels();
-			final int sourceChannels = frame.imageChannels > 0 ? frame.imageChannels : 3;
+			final int sourceChannels = frame.imageChannels > 0 ? frame.imageChannels : 4;
 			final int sourceStride = frame.imageStride > 0 ? frame.imageStride : frame.imageWidth * sourceChannels;
-			final int targetChannels = 3;
-			final int targetRowBytes = frame.imageWidth * targetChannels;
-			final byte[] row = getFrameRow(targetRowBytes);
+			final int targetRowBytes = frame.imageWidth * 4;
 
 			pixels.clear();
-			for (int y = 0; y < frame.imageHeight; y++) {
-				source.position(y * sourceStride);
-				if (sourceChannels == targetChannels) {
-					source.get(row, 0, targetRowBytes);
-				} else {
+			if (sourceChannels == 4 && sourceStride == targetRowBytes) {
+				source.position(0).limit(targetRowBytes * frame.imageHeight);
+				pixels.put(source);
+			} else if (sourceChannels == 4) {
+				for (int y = 0; y < frame.imageHeight; y++) {
+					source.limit(y * sourceStride + targetRowBytes).position(y * sourceStride);
+					pixels.put(source);
+				}
+			} else {
+				// Fallback for decoders that ignore the requested pixel format.
+				for (int y = 0; y < frame.imageHeight; y++) {
 					for (int x = 0; x < frame.imageWidth; x++) {
-						int sourceIndex = y * sourceStride + x * sourceChannels;
-						int targetIndex = x * targetChannels;
-						row[targetIndex] = source.get(sourceIndex);
-						row[targetIndex + 1] = source.get(sourceIndex + 1);
-						row[targetIndex + 2] = source.get(sourceIndex + 2);
+						final int sourceIndex = y * sourceStride + x * sourceChannels;
+						pixels.put(source.get(sourceIndex)).put(source.get(sourceIndex + 1)).put(source.get(sourceIndex + 2)).put((byte) -1);
 					}
 				}
-				pixels.put(row);
 			}
 			pixels.flip();
-		}
-
-		private byte[] getFrameRow(int targetRowBytes) {
-			if (frameRow == null || frameRow.length < targetRowBytes) {
-				frameRow = new byte[targetRowBytes];
-			}
-			return frameRow;
 		}
 
 		private void preparePixmapForDraw(Pixmap pixmap) {
 			ByteBuffer pixels = pixmap.getPixels();
 			pixels.position(0);
-			pixels.limit(pixmap.getWidth() * pixmap.getHeight() * 3);
+			pixels.limit(pixmap.getWidth() * pixmap.getHeight() * 4);
 		}
 
 		public void exec(Command com) {

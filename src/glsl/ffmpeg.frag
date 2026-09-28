@@ -10,5 +10,6 @@ uniform sampler2D u_texture;
 
 void main() {
     vec4 c4 = texture2D(u_texture, v_texCoords);
-    gl_FragColor = v_color * vec4(c4.b, c4.g, c4.r, c4.a);
+    // Videos were always drawn opaque (RGB888); keep that even if a decoder emits real alpha.
+    gl_FragColor = v_color * vec4(c4.b, c4.g, c4.r, 1.0);
 }

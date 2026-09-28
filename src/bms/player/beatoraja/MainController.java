@@ -346,18 +346,10 @@ public final class MainController {
 		Logger.getGlobal().info("初期化時間(ms) : " + (System.currentTimeMillis() - t));
 
 		Thread polling = new Thread(() -> {
-			long time = 0;
 			for (;;) {
-				final long now = System.nanoTime() / 1000000;
-				if (time != now) {
-					time = now;
-					input.poll();
-				} else {
-					try {
-						Thread.sleep(0, 500000);
-					} catch (InterruptedException e) {
-					}
-				}
+				input.poll();
+				// Park until the next millisecond boundary instead of waking every 0.5ms to check for it.
+				java.util.concurrent.locks.LockSupport.parkNanos(1000000 - System.nanoTime() % 1000000);
 			}
 		});
 		polling.start();

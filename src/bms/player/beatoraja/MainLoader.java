@@ -34,6 +34,7 @@ import javafx.scene.layout.VBox;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter;
 
 import bms.player.beatoraja.AudioConfig.DriverType;
 import bms.player.beatoraja.ir.IRConnection;
@@ -170,8 +171,24 @@ public class MainLoader extends Application {
                 default -> cfg.setDecorated(true);
             }
             cfg.useVsync(config.isVsync());
-            cfg.setIdleFPS(config.getMaxFramePerSecond());
-            cfg.setForegroundFPS(config.getMaxFramePerSecond());
+            // Only polls events while minimized. Lwjgl3 divides 1000 by this, so it must never be 0 (unlimited FPS).
+            cfg.setIdleFPS(30);
+            // FrameLimiter below replaces Lwjgl3's yield-spinning Sync.
+            cfg.setForegroundFPS(0);
+            final FrameLimiter limiter = new FrameLimiter();
+            final int maxFps = config.getMaxFramePerSecond();
+            final AtomicBoolean focused = new AtomicBoolean(true);
+            cfg.setWindowListener(new Lwjgl3WindowAdapter() {
+                @Override
+                public void focusLost() {
+                    focused.set(false);
+                }
+
+                @Override
+                public void focusGained() {
+                    focused.set(true);
+                }
+            });
             cfg.setTitle(MainController.getVersion());
             cfg.setAudioConfig(config.getAudioConfig().getDeviceSimultaneousSources(),
                 Math.max(config.getAudioConfig().getDeviceBufferSize(), 512), 3);
@@ -188,6 +205,9 @@ public class MainLoader extends Application {
 				}
 				
 				public void render() {
+					// Limit before drawing, like Lwjgl3's own Sync after glfwPollEvents, so input timing is unchanged.
+					// Unfocused windows receive no key input; 60 FPS keeps stream captures smooth.
+					limiter.sync(focused.get() ? maxFps : (maxFps <= 0 ? 60 : Math.min(maxFps, 60)));
 					main.render();
 				}
 				
