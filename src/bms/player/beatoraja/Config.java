@@ -49,6 +49,10 @@ public class Config implements Validatable {
 	 */
 	private boolean vsync;
 	/**
+	 * macOS: read the keyboard through IOHIDManager so key timing does not depend on the frame rate
+	 */
+	private boolean directKeyboardInput = true;
+	/**
 	 * 解像度
 	 */
 	private Resolution resolution = HD;
@@ -218,6 +222,14 @@ public class Config implements Validatable {
 
 	public void setVsync(boolean vsync) {
 		this.vsync = vsync;
+	}
+
+	public boolean isDirectKeyboardInput() {
+		return directKeyboardInput;
+	}
+
+	public void setDirectKeyboardInput(boolean directKeyboardInput) {
+		this.directKeyboardInput = directKeyboardInput;
 	}
 
 	public int getBga() {

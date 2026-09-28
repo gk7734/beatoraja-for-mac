@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
+import bms.player.beatoraja.input.MacHidKeyboard;
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
@@ -182,11 +183,13 @@ public class MainLoader extends Application {
                 @Override
                 public void focusLost() {
                     focused.set(false);
+                    MacHidKeyboard.setFocused(false);
                 }
 
                 @Override
                 public void focusGained() {
                     focused.set(true);
+                    MacHidKeyboard.setFocused(true);
                 }
             });
             cfg.setTitle(MainController.getVersion());

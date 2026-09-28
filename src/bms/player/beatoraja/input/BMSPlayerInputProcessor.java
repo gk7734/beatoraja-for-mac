@@ -35,6 +35,9 @@ public class BMSPlayerInputProcessor {
 	public BMSPlayerInputProcessor(Config config, PlayerConfig player) {
 		Resolution resolution = config.getResolution();
 		kbinput = new KeyBoardInputProcesseor(this, player.getMode14().getKeyboardConfig(), resolution);
+		if (config.isDirectKeyboardInput()) {
+			kbinput.setHidKeyboard(MacHidKeyboard.start());
+		}
 		// Gdx.input.setInputProcessor(kbinput);
 		Array<BMControllerInputProcessor> bminput = new Array<BMControllerInputProcessor>();
 		for (Controller controller : Controllers.getControllers()) {

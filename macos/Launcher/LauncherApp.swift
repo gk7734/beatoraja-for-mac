@@ -199,7 +199,7 @@ struct SettingsPage: View {
         }.formStyle(.grouped).scrollContentBackground(.hidden)
         .controlSize(.regular)
     }
-    func toggle(_ title: String, _ key: String) -> some View { Toggle(title, isOn: store.flag(key)) }
+    func toggle(_ title: String, _ key: String, default fallback: Bool = false) -> some View { Toggle(title, isOn: store.flag(key, default: fallback)) }
     func number(_ title: String, _ key: String, _ range: ClosedRange<Double> = 0...10000, step: Double = 1) -> some View {
         LabeledContent(title) { TextField("", value: store.number(key), format: .number).multilineTextAlignment(.trailing).frame(width: 72)
             Stepper("", value: store.number(key), in: range, step: step).labelsHidden().fixedSize() }
@@ -281,6 +281,9 @@ struct SettingsPage: View {
             Section("키보드") {
                 KeyBindings(mode: mode)
                 number("입력 간격(ms)", "p.\(mode).keyboard.duration", 0...100)
+                // Matches Config.directKeyboardInput's Java default for configs written before the field existed.
+                toggle("키보드 직접 입력", "s.directKeyboardInput", default: true)
+                Text("프레임 수와 관계없이 키 입력 시점을 정확하게 기록합니다. 처음 실행할 때 입력 모니터링 권한을 요청하며, 허용한 뒤 다음 실행부터 적용됩니다.").font(.caption).foregroundStyle(.secondary)
             }
             Section("컨트롤러") { ControllerSettings(mode: mode) }
             Section("마우스 스크래치") {

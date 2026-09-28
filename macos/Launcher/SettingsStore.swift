@@ -145,8 +145,8 @@ import SwiftUI
     func text(_ key: String, default fallback: String = "") -> Binding<String> {
         Binding(get: { self.value(key) as? String ?? fallback }, set: { self.set(key, $0) })
     }
-    func flag(_ key: String) -> Binding<Bool> {
-        Binding(get: { self.value(key) as? Bool ?? false }, set: { self.set(key, $0) })
+    func flag(_ key: String, default fallback: Bool = false) -> Binding<Bool> {
+        Binding(get: { self.value(key) as? Bool ?? fallback }, set: { self.set(key, $0) })
     }
     func number(_ key: String, default fallback: Double = 0) -> Binding<Double> {
         Binding(get: { (self.value(key) as? NSNumber)?.doubleValue ?? fallback }, set: { self.set(key, $0) })

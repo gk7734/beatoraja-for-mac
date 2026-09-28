@@ -56,6 +56,15 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	 * キーの最少入力間隔(ms)
 	 */
 	private int duration;
+	/**
+	 * Direct HID keyboard input on macOS, or null to read keys from GLFW only.
+	 */
+	private MacHidKeyboard hid;
+	/**
+	 * Keys for which HID and GLFW were seen pressed together. Only these use HID input, so a key
+	 * macOS maps differently on this keyboard layout can never trigger the wrong lane.
+	 */
+	private final boolean[] hidVerified = new boolean[256];
 
 	public KeyBoardInputProcesseor(BMSPlayerInputProcessor bmsPlayerInputProcessor, KeyboardConfig config, Resolution resolution) {
 		super(bmsPlayerInputProcessor, Type.KEYBOARD);
@@ -96,19 +105,42 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		mouseScratchInput.clear();
 	}
 
+	void setHidKeyboard(MacHidKeyboard hid) {
+		this.hid = hid;
+	}
+
 	public void poll(final long microtime) {
+		final MacHidKeyboard hid = this.hid;
+		if (hid != null) {
+			// Apply HID key changes in order with their own timestamps, so taps shorter than the poll interval are kept.
+			final long starttime = bmsPlayerInputProcessor.getStartTime();
+			for (MacHidKeyboard.Event event; (event = hid.poll()) != null;) {
+				if (textmode || !hidVerified[event.keycode()]) {
+					continue;
+				}
+				final long time = Math.min(microtime, event.nanos() / 1000 - starttime);
+				for (int i = 0; i < keys.length; i++) {
+					if (keys[i] == event.keycode()) {
+						updateLane(i, event.pressed(), time);
+					}
+				}
+			}
+		}
 		if (!textmode) {
 			for (int i = 0; i < keys.length; i++) {
 				if(keys[i] < 0) {
 					continue;
 				}
-				final boolean pressed = Gdx.input.isKeyPressed(keys[i]);
-				if (pressed != keystate[keys[i]] && microtime >= keytime[keys[i]] + duration * 1000) {
-					keystate[keys[i]] = pressed;
-					keytime[keys[i]] = microtime;
-					this.bmsPlayerInputProcessor.keyChanged(this, microtime, i, pressed);
-					this.bmsPlayerInputProcessor.setAnalogState(i, false, 0);
+				if (hid != null && hidVerified[keys[i]]) {
+					// Catches changes the duration filter dropped above, and focus loss.
+					updateLane(i, hid.isPressed(keys[i]), microtime);
+					continue;
 				}
+				final boolean pressed = Gdx.input.isKeyPressed(keys[i]);
+				if (hid != null && pressed && hid.isPressed(keys[i])) {
+					hidVerified[keys[i]] = true;
+				}
+				updateLane(i, pressed, microtime);
 			}
 
 			final boolean startpressed = Gdx.input.isKeyPressed(control[0]);
@@ -133,6 +165,16 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		}
 		
 		mouseScratchInput.poll(microtime);
+	}
+
+	private void updateLane(int i, boolean pressed, long time) {
+		final int key = keys[i];
+		if (pressed != keystate[key] && time >= keytime[key] + duration * 1000) {
+			keystate[key] = pressed;
+			keytime[key] = time;
+			this.bmsPlayerInputProcessor.keyChanged(this, time, i, pressed);
+			this.bmsPlayerInputProcessor.setAnalogState(i, false, 0);
+		}
 	}
 
 	private int currentlyHeldModifiers() {

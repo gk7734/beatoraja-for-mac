@@ -10,6 +10,7 @@ struct SettingSearchItem: Identifiable {
         if ["시스템", "키음", "배경음"].contains(title) { text += " 음량 볼륨 volume" }
         if title.contains("프레임") { text += " fps 프레임레이트" }
         if title.contains("수직") { text += " vsync" }
+        if title.contains("직접 입력") { text += " hid 입력 모니터링 판정 지연" }
         if title.contains("배경 영상") { text += " bga 동영상" }
         if title.contains("타이밍") { text += " 지연 latency" }
         if title.contains("폴더") { text += " 경로 디렉터리" }
@@ -58,6 +59,7 @@ struct SettingSearchItem: Identifiable {
         .init(page: .select, title: "스크롤 대기 시간(ms)"),
         .init(page: .select, title: "빠른 스크롤 간격(ms)"),
         .init(page: .input, title: "입력 간격(ms)"),
+        .init(page: .input, title: "키보드 직접 입력"),
         .init(page: .input, title: "마우스 스크래치 사용"),
         .init(page: .input, title: "이동 거리"),
         .init(page: .input, title: "인식 시간(ms)"),
