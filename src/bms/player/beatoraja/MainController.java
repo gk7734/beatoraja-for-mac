@@ -535,7 +535,7 @@ public final class MainController {
             // screen shot
             if (input.isActivated(KeyCommand.SAVE_SCREENSHOT)) {
                 if (screenshot == null || !screenshot.isAlive()) {
-            		final byte[] pixels = ScreenUtils.getFrameBufferPixels(0, 0, Gdx.graphics.getBackBufferWidth(),Gdx.graphics.getBackBufferHeight(), true);
+            		final byte[] pixels = ScreenUtils.getFrameBufferPixels(0, 0, RenderScaler.getTargetWidth(), RenderScaler.getTargetHeight(), true);
                     screenshot = new Thread(() -> {
                 		// 全ピクセルのアルファ値を255にする(=透明色を無くす)
                 		for(int i = 3;i < pixels.length;i+=4) {
@@ -549,7 +549,7 @@ public final class MainController {
 
             if (input.isActivated(KeyCommand.POST_TWITTER)) {
                 if (screenshot == null || !screenshot.isAlive()) {
-            		final byte[] pixels = ScreenUtils.getFrameBufferPixels(0, 0, Gdx.graphics.getBackBufferWidth(),Gdx.graphics.getBackBufferHeight(), false);
+            		final byte[] pixels = ScreenUtils.getFrameBufferPixels(0, 0, RenderScaler.getTargetWidth(), RenderScaler.getTargetHeight(), false);
                     screenshot = new Thread(() -> {
                 		// 全ピクセルのアルファ値を255にする(=透明色を無くす)
                 		for(int i = 3;i < pixels.length;i+=4) {

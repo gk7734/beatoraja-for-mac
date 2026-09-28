@@ -10,7 +10,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.logging.Logger;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
@@ -99,7 +98,7 @@ public class ScreenShotTwitterExporter implements ScreenShotExporter {
 		TwitterFactory twitterFactory = new TwitterFactory(cb.build());
 		Twitter twitter = twitterFactory.getInstance();
 
-		Pixmap pixmap = new Pixmap(Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight(),
+		Pixmap pixmap = new Pixmap(bms.player.beatoraja.RenderScaler.getTargetWidth(), bms.player.beatoraja.RenderScaler.getTargetHeight(),
 				Pixmap.Format.RGBA8888);
         try {
 			// create png byte stream

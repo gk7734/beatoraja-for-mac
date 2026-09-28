@@ -91,6 +91,8 @@ public class SkinPreview extends SkinObject {
 		} finally {
 			previewBatch.end();
 			frameBuffer.end();
+			// end() always returns to the backbuffer; go back to the scaled render target instead.
+			bms.player.beatoraja.RenderScaler.restoreTarget();
 			previewBatch.setProjectionMatrix(projection);
 			previewBatch.setTransformMatrix(transform);
 		}

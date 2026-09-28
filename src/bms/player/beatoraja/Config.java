@@ -53,6 +53,10 @@ public class Config implements Validatable {
 	 */
 	private boolean directKeyboardInput = true;
 	/**
+	 * macOS: draw at the Retina backbuffer's full 2x density instead of 1x and upscaling
+	 */
+	private boolean hiDpiRendering = false;
+	/**
 	 * 解像度
 	 */
 	private Resolution resolution = HD;
@@ -222,6 +226,14 @@ public class Config implements Validatable {
 
 	public void setVsync(boolean vsync) {
 		this.vsync = vsync;
+	}
+
+	public boolean isHiDpiRendering() {
+		return hiDpiRendering;
+	}
+
+	public void setHiDpiRendering(boolean hiDpiRendering) {
+		this.hiDpiRendering = hiDpiRendering;
 	}
 
 	public boolean isDirectKeyboardInput() {

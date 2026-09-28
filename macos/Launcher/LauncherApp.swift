@@ -213,13 +213,42 @@ struct SettingsPage: View {
     var modes: some View {
         Picker("키 모드", selection: $mode) { ForEach([("mode5","5키"),("mode7","7키"),("mode9","9키"),("mode10","10키"),("mode14","14키"),("mode24","24키"),("mode24double","48키")], id: \.0) { Text($0.1).tag($0.0) } }
     }
+    /// Mirrors Resolution.java. Sizes are in points, the same unit the game window uses.
+    static let resolutions: [(String, Int, Int)] = [
+        ("SD", 640, 480), ("SVGA", 800, 600), ("XGA", 1024, 768), ("HD", 1280, 720), ("WXGA", 1280, 800),
+        ("QUADVGA", 1280, 960), ("FWXGA", 1366, 768), ("SXGAPLUS", 1400, 1050), ("WXGAPLUS", 1440, 900),
+        ("MACBOOK_AIR_13", 1470, 956), ("MACBOOK_PRO_14", 1512, 982), ("HDPLUS", 1600, 900), ("UXGA", 1600, 1200),
+        ("WSXGAPLUS", 1680, 1050), ("MACBOOK_AIR_15", 1710, 1112), ("MACBOOK_PRO_16", 1728, 1117), ("FULLHD", 1920, 1080),
+        ("WUXGA", 1920, 1200), ("QXGA", 2048, 1536), ("UWFHD", 2560, 1080), ("WQHD", 2560, 1440), ("WQXGA", 2560, 1600),
+        ("UWQHD", 3440, 1440), ("ULTRAHD", 3840, 2160),
+    ]
+    static let macNames = ["MACBOOK_AIR_13": "MacBook Air 13", "MACBOOK_PRO_14": "MacBook Pro 14", "MACBOOK_AIR_15": "MacBook Air 15", "MACBOOK_PRO_16": "MacBook Pro 16"]
+    /// Hides sizes larger than the main screen, which cannot fit as a window, but always keeps the saved value.
+    var resolutionOptions: [(String, String)] {
+        let screen = NSScreen.screens.first?.frame.size ?? .zero
+        let current = store.value("s.resolution") as? String
+        return Self.resolutions.filter { $0.0 == current || screen == .zero || (CGFloat($0.1) <= screen.width && CGFloat($0.2) <= screen.height) }.map { name, w, h in
+            var label = "\(w) × \(h)"
+            if let mac = Self.macNames[name] { label += " (\(mac))" } else if w * 9 != h * 16 { label += " (\(Self.aspect(w, h)))" }
+            return (name, label)
+        }
+    }
+    static func aspect(_ w: Int, _ h: Int) -> String {
+        if w * 10 == h * 16 { return "16:10" }
+        if w * 3 == h * 4 { return "4:3" }
+        if w * 4 == h * 5 { return "5:4" }
+        if w * 9 == h * 21 || [2560 * 1080, 3440 * 1440].contains(w * h) { return "21:9" }
+        return String(format: "%.2f:1", Double(w) / Double(h))
+    }
     var display: some View {
         Group {
             Section("화면") {
                 choice("화면 모드", "s.displaymode", [("WINDOW","창 모드"),("FULLSCREEN","전체 화면"),("BORDERLESS","테두리 없는 창")])
-                choice("해상도", "s.resolution", [("HD","1280 × 720"),("FWXGA","1366 × 768"),("HDPLUS","1600 × 900"),("FULLHD","1920 × 1080"),("WQHD","2560 × 1440"),("ULTRAHD","3840 × 2160"),("SD","640 × 480"),("SVGA","800 × 600"),("XGA","1024 × 768"),("QUADVGA","1280 × 960"),("SXGAPLUS","1400 × 1050"),("UXGA","1600 × 1200"),("WSXGAPLUS","1680 × 1050"),("WUXGA","1920 × 1200"),("QXGA","2048 × 1536")])
+                choice("해상도", "s.resolution", resolutionOptions)
                 toggle("수직 동기화", "s.vsync")
                 number("최대 프레임 수 (0은 제한 없음)", "s.maxFramePerSecond", 0...2000)
+                toggle("Retina 고해상도 렌더링", "s.hiDpiRendering")
+                Text("끄면 화면을 1배 밀도로 그린 뒤 확대합니다. GPU 부하와 발열이 크게 줄고, 대부분의 스킨에서는 차이가 거의 보이지 않습니다.").font(.caption).foregroundStyle(.secondary)
             }
             Section("배경 영상") {
                 choice("재생", "s.bga", [("0","항상"),("1","자동 플레이만"),("2","사용 안 함")], numeric: true)

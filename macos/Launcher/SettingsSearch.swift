@@ -10,6 +10,7 @@ struct SettingSearchItem: Identifiable {
         if ["시스템", "키음", "배경음"].contains(title) { text += " 음량 볼륨 volume" }
         if title.contains("프레임") { text += " fps 프레임레이트" }
         if title.contains("수직") { text += " vsync" }
+        if title.contains("Retina") { text += " 레티나 hidpi 발열 해상도 배율" }
         if title.contains("직접 입력") { text += " hid 입력 모니터링 판정 지연" }
         if title.contains("배경 영상") { text += " bga 동영상" }
         if title.contains("타이밍") { text += " 지연 latency" }
@@ -27,6 +28,7 @@ struct SettingSearchItem: Identifiable {
         .init(page: .display, title: "해상도"),
         .init(page: .display, title: "수직 동기화"),
         .init(page: .display, title: "최대 프레임 수 (0은 제한 없음)"),
+        .init(page: .display, title: "Retina 고해상도 렌더링"),
         .init(page: .display, title: "재생"),
         .init(page: .display, title: "확대 방식"),
         .init(page: .display, title: "미스 화면 표시 시간(ms)"),

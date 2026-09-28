@@ -177,6 +177,7 @@ public class MainLoader extends Application {
             // FrameLimiter below replaces Lwjgl3's yield-spinning Sync.
             cfg.setForegroundFPS(0);
             final FrameLimiter limiter = new FrameLimiter();
+            final RenderScaler scaler = new RenderScaler(config.isHiDpiRendering());
             final int maxFps = config.getMaxFramePerSecond();
             final AtomicBoolean focused = new AtomicBoolean(true);
             cfg.setWindowListener(new Lwjgl3WindowAdapter() {
@@ -211,7 +212,12 @@ public class MainLoader extends Application {
 					// Limit before drawing, like Lwjgl3's own Sync after glfwPollEvents, so input timing is unchanged.
 					// Unfocused windows receive no key input; 60 FPS keeps stream captures smooth.
 					limiter.sync(focused.get() ? maxFps : (maxFps <= 0 ? 60 : Math.min(maxFps, 60)));
-					main.render();
+					scaler.begin();
+					try {
+						main.render();
+					} finally {
+						scaler.end();
+					}
 				}
 				
 				public void pause() {
@@ -219,6 +225,7 @@ public class MainLoader extends Application {
 				}
 				
 				public void dispose() {
+					scaler.dispose();
 					main.dispose();
 				}
 				

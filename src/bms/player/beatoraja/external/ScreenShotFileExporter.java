@@ -17,7 +17,6 @@ import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -75,7 +74,7 @@ public class ScreenShotFileExporter implements ScreenShotExporter {
 		}
 		stateName = stateName.replace("\\", "￥").replace("/", "／").replace(":", "：").replace("*", "＊").replace("?", "？").replace("\"", "”").replace("<", "＜").replace(">", "＞").replace("|", "｜").replace("\t", " ");
 
-		Pixmap pixmap = new Pixmap(Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight(), Pixmap.Format.RGBA8888);
+		Pixmap pixmap = new Pixmap(bms.player.beatoraja.RenderScaler.getTargetWidth(), bms.player.beatoraja.RenderScaler.getTargetHeight(), Pixmap.Format.RGBA8888);
 		try {
 			String path = "screenshot/" + sdf.format(Calendar.getInstance().getTime()) + stateName +".png";
 			BufferUtils.copy(pixels, 0, pixmap.getPixels(), pixels.length);
