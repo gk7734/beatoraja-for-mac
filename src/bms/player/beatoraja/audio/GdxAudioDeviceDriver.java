@@ -21,7 +21,9 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 	private final MixerInput[] inputs;
 	private final short[] buffer;
 	private final Thread mixer;
-	private AudioDevice device;
+	private volatile AudioDevice device;
+	private final boolean coreAudio;
+	private final int framesPerBuffer;
 	private long idcount;
 	private volatile boolean stop;
 
@@ -33,16 +35,11 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
                     ? CoreAudioDevice.defaultSampleRate() : 44100);
 		channels = 2;
 
-        boolean coreAudio = audioConfig.getDriver() == AudioConfig.DriverType.CoreAudio;
-        int framesPerBuffer = coreAudio
+        coreAudio = audioConfig.getDriver() == AudioConfig.DriverType.CoreAudio;
+        framesPerBuffer = coreAudio
                 ? Math.max(32, Math.min(16384, audioConfig.getDeviceBufferSize()))
                 : getFramesPerBuffer(audioConfig.getDeviceBufferSize());
-        if (coreAudio) {
-            device = new CoreAudioDevice(getSampleRate(), framesPerBuffer);
-        } else {
-            if (Gdx.audio == null) throw new IllegalStateException("libGDX audio is disabled");
-            device = Gdx.audio.newAudioDevice(getSampleRate(), false);
-        }
+        device = openDevice();
         channels = device.isMono() ? 1 : 2;
 		buffer = new short[framesPerBuffer * channels];
 		inputs = new MixerInput[audioConfig.getDeviceSimultaneousSources()];
@@ -61,6 +58,47 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 		mixer = new Thread(this, coreAudio ? "Core Audio Mixer" : "GdxAudioDevice Mixer");
 		mixer.setPriority(Thread.MAX_PRIORITY);
 		mixer.start();
+	}
+
+	private AudioDevice openDevice() {
+		if (coreAudio) {
+			return new CoreAudioDevice(getSampleRate(), framesPerBuffer);
+		}
+		if (Gdx.audio == null) throw new IllegalStateException("libGDX audio is disabled");
+		return Gdx.audio.newAudioDevice(getSampleRate(), false);
+	}
+
+	/**
+	 * Replaces a device whose output failed (e.g. a write timed out after the process was stalled),
+	 * retrying with backoff so a transient failure does not silence the rest of the session.
+	 */
+	private void reopenDevice(Throwable cause) {
+		Logger.getGlobal().warning("Audio output interrupted, reopening device: " + cause.getMessage());
+		long delay = 100;
+		while (!stop) {
+			try {
+				final AudioDevice old = device;
+				device = null;
+				if (old != null) old.dispose();
+				final AudioDevice reopened = openDevice();
+				if (stop) {
+					// dispose() may have already given up waiting for this thread.
+					reopened.dispose();
+					return;
+				}
+				device = reopened;
+				Logger.getGlobal().info("Audio output reopened");
+				return;
+			} catch (Throwable e) {
+				Logger.getGlobal().warning("Audio device reopen failed: " + e.getMessage());
+				try {
+					Thread.sleep(delay);
+				} catch (InterruptedException ie) {
+					return;
+				}
+				delay = Math.min(delay * 2, 2000);
+			}
+		}
 	}
 
 	private static int getFramesPerBuffer(int configuredFrames) {
@@ -183,8 +221,9 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 			try {
 				device.writeSamples(buffer, 0, buffer.length);
 			} catch (Throwable e) {
-				if (!stop) Logger.getGlobal().severe("Audio output stopped: " + e.getMessage());
-                stop = true;
+				if (!stop) {
+					reopenDevice(e);
+				}
 			}
 		}
 	}
@@ -266,7 +305,9 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
         // Native writes time out after one second, so shutdown cannot wait indefinitely.
         try { mixer.join(1500); }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-        if (device != null) device.dispose();
+        final AudioDevice current = device;
+        device = null;
+        if (current != null) current.dispose();
         super.dispose();
 	}
 

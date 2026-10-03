@@ -77,9 +77,15 @@ JNIEXPORT void JNICALL Java_bms_player_beatoraja_audio_CoreAudioDevice_write
     int index = -1;
     while (index < 0) {
         for (int i = 0; i < BUFFER_COUNT; i++) if (out->available[i]) { index = i; break; }
-        if (index < 0 && pthread_cond_timedwait(&out->ready, &out->lock, &deadline) != 0) {
-            pthread_mutex_unlock(&out->lock);
-            fail(env, "output timeout", -1); return;
+        if (index >= 0) break;
+        if (pthread_cond_timedwait(&out->ready, &out->lock, &deadline) == ETIMEDOUT) {
+            // A process that was suspended (memory inspection, debugger, system stall) wakes up past the
+            // deadline even though the queue may have returned buffers meanwhile; look once more.
+            for (int i = 0; i < BUFFER_COUNT; i++) if (out->available[i]) { index = i; break; }
+            if (index < 0) {
+                pthread_mutex_unlock(&out->lock);
+                fail(env, "output timeout", -1); return;
+            }
         }
     }
     out->available[index] = 0;
