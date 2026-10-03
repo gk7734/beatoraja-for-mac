@@ -66,6 +66,15 @@ public class BitmapFontCache {
         if (font.font != null) {
             font.font.dispose();
         }
+        // The font was built from pre-loaded regions, so BitmapFont does not own (or dispose) its page textures.
+        if (font.regions != null) {
+            for (TextureRegion region : font.regions) {
+                if (region != null && region.getTexture() != null) {
+                    region.getTexture().dispose();
+                }
+            }
+            font.regions = null;
+        }
     }
 
     static public CacheableBitmapFont Get(Path path) {
