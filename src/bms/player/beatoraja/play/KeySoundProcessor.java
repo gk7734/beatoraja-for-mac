@@ -48,7 +48,7 @@ public class KeySoundProcessor {
 	 */
 	class AutoplayThread extends Thread {
 
-		private boolean stop = false;
+		private volatile boolean stop = false;
 
 		private final long starttime;
 		final TimeLine[] timelines;
@@ -82,17 +82,15 @@ public class KeySoundProcessor {
 					}
 					p++;
 				}
-				if (p < timelines.length) {
-					try {
-						final long sleeptime = timelines[p].getMicroTime() - time;
-						if (sleeptime > 0) {
-							sleep(sleeptime / 1000);
-						}
-					} catch (InterruptedException e) {
-					}
-				}
 				if (time >= lasttime) {
 					break;
+				}
+				// Wait for the next BG note, or for the end margin once all notes have played. Sleeping in
+				// whole milliseconds used to spin on sub-millisecond gaps and through the whole 5s end margin.
+				// Short chunks keep reacting to play speed changes and pauses on the play timer.
+				final long wait = (p < timelines.length ? timelines[p].getMicroTime() : lasttime) - time;
+				if (wait > 0) {
+					java.util.concurrent.locks.LockSupport.parkNanos(Math.min(wait, 2000) * 1000);
 				}
 			}
 		}
