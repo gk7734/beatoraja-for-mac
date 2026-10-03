@@ -200,6 +200,7 @@ public class MainLoader extends Application {
                     || config.getAudioConfig().getDriver() == DriverType.CoreAudio);
 
 			new Lwjgl3Application(new ApplicationListener() {
+				private FrameHitchWatchdog watchdog;
 				
 				public void resume() {
 					main.resume();
@@ -210,6 +211,10 @@ public class MainLoader extends Application {
 				}
 				
 				public void render() {
+					if (watchdog != null) {
+						final MainState state = main.getCurrentState();
+						watchdog.frameStarted(state != null ? state.getClass().getSimpleName() : "");
+					}
 					// Limit before drawing, like Lwjgl3's own Sync after glfwPollEvents, so input timing is unchanged.
 					// Unfocused windows receive no key input; 60 FPS keeps stream captures smooth.
 					limiter.sync(focused.get() ? maxFps : (maxFps <= 0 ? 60 : Math.min(maxFps, 60)));
@@ -232,6 +237,8 @@ public class MainLoader extends Application {
 				
 				public void create() {
 					main.create();
+					watchdog = new FrameHitchWatchdog(Thread.currentThread());
+					watchdog.start();
 				}
 			}, cfg);
 		} catch (Throwable e) {
