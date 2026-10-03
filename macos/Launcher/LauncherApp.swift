@@ -364,7 +364,9 @@ struct SettingsPage: View {
                 }.frame(maxWidth: .infinity).padding(.vertical, 16)
             }
             Section("플레이어") { TextField("표시 이름", text: store.text("p.name")); toggle("이벤트 모드", "p.eventMode"); number("종료 키 누름 시간(ms)", "p.exitPressDuration", 0...10000) }
-            Section("동작") { toggle("창 위치와 크기 유지", "p.isWindowHold"); toggle("안내 효과음", "p.isGuideSE"); toggle("스크린샷을 클립보드에도 복사", "s.setClipboardScreenshot"); toggle("스킨 이미지 캐시", "s.cacheSkinImage") }
+            Section("동작") { toggle("창 위치와 크기 유지", "p.isWindowHold"); toggle("안내 효과음", "p.isGuideSE"); toggle("스크린샷을 클립보드에도 복사", "s.setClipboardScreenshot"); toggle("스킨 이미지 캐시", "s.cacheSkinImage")
+                // Measured with LITONE12: 4 keeps ~2GB more memory but cuts screen changes from ~1.4s to ~0.4s.
+                choice("스킨 이미지 보관", "s.skinPixmapGen", [("4","빠른 화면 전환 (메모리 더 사용)"),("0","메모리 절약 (화면 전환이 느림)")], numeric: true) }
             Section("크레딧") {
                 LabeledContent("beatoraja 원작자", value: "exch 및 beatoraja 기여자")
                 Link("원본 프로젝트", destination: URL(string: "https://github.com/exch-bms2/beatoraja")!)

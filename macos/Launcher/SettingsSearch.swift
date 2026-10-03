@@ -10,6 +10,7 @@ struct SettingSearchItem: Identifiable {
         if ["시스템", "키음", "배경음"].contains(title) { text += " 음량 볼륨 volume" }
         if title.contains("프레임") { text += " fps 프레임레이트" }
         if title.contains("수직") { text += " vsync" }
+        if title.contains("이미지 보관") { text += " 메모리 램 memory skinPixmapGen" }
         if title.contains("Retina") { text += " 레티나 hidpi 발열 해상도 배율" }
         if title.contains("직접 입력") { text += " hid 입력 모니터링 판정 지연" }
         if title.contains("배경 영상") { text += " bga 동영상" }
@@ -91,6 +92,7 @@ struct SettingSearchItem: Identifiable {
         .init(page: .general, title: "안내 효과음"),
         .init(page: .general, title: "스크린샷을 클립보드에도 복사"),
         .init(page: .general, title: "스킨 이미지 캐시"),
+        .init(page: .general, title: "스킨 이미지 보관"),
         .init(page: .general, title: "설정 및 기록 폴더 열기"),
         .init(page: .online, title: "전송 재시도 횟수"),
         .init(page: .tables, title: "https://…"),
