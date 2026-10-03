@@ -163,16 +163,18 @@ import SwiftUI
             set("s.bmsroot", paths)
         }
     }
-    func run(scan: Bool = false, rebuild: Bool = false) {
+    func run(scan: Bool = false, rebuild: Bool = false, tables: Bool = false, tableURL: String? = nil) {
         guard !busy, save() else { return }
         let process = Process()
         process.executableURL = appURL.deletingLastPathComponent().appendingPathComponent("runtime/Contents/Home/bin/java")
         var args = ["-Xms256m", "-Xmx4g", "--enable-native-access=ALL-UNNAMED,javafx.graphics", "--add-modules=javafx.controls,javafx.fxml,javafx.swing", "-Djava.library.path=\(appURL.appendingPathComponent("natives").path)", "-cp", appURL.appendingPathComponent("beatoraja.jar").path]
-        if scan { args += ["bms.player.beatoraja.MacMaintenance", rebuild ? "--rebuild" : "--scan"] }
+        if tables { args += ["bms.player.beatoraja.MacMaintenance", "--tables"]; if let tableURL { args.append(tableURL) } }
+        else if scan { args += ["bms.player.beatoraja.MacMaintenance", rebuild ? "--rebuild" : "--scan"] }
         else { args.insert("-XstartOnFirstThread", at: 0); args += ["bms.player.beatoraja.MacBootstrap", "-s"] }
         process.arguments = args; process.currentDirectoryURL = dataURL
-        let log = dataURL.appendingPathComponent(scan ? "scan.log" : "game.log")
+        let log = dataURL.appendingPathComponent(tables ? "table.log" : (scan ? "scan.log" : "game.log"))
         do {
+            if tables { try? fm.removeItem(at: dataURL.appendingPathComponent("table-update-result.json")) }
             if !fm.fileExists(atPath: log.path) { fm.createFile(atPath: log.path, contents: nil) }
             let handle = try FileHandle(forWritingTo: log); try handle.seekToEnd(); logHandle = handle
             process.standardOutput = handle; process.standardError = handle
@@ -183,13 +185,23 @@ import SwiftUI
                     self.busy = false; self.child = nil; try? self.logHandle?.close(); self.logHandle = nil
                     self.status = code == 0 ? (scan ? "곡 검색을 마쳤습니다" : "게임을 종료했습니다") : "실행 중 문제가 발생했습니다"
                     if code != 0 { self.error = "실행을 완료하지 못했습니다(\(code)).\n\(log.path)에서 실행 기록을 확인할 수 있습니다." }
+                    if tables {
+                        let resultURL = self.dataURL.appendingPathComponent("table-update-result.json")
+                        if let data = try? Data(contentsOf: resultURL),
+                           let report = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                           let results = report["results"] as? [[String: Any]] {
+                            let failed = results.filter { $0["success"] as? Bool != true }
+                            self.status = "난이도표 \(results.count - failed.count)개 갱신 완료" + (failed.isEmpty ? "" : ", \(failed.count)개 실패")
+                            self.error = failed.isEmpty ? nil : failed.map { "\($0["url"] as? String ?? "")\n\($0["error"] as? String ?? "다운로드 실패")" }.joined(separator: "\n\n")
+                        }
+                    }
                     do { try self.reload() } catch { self.error = error.localizedDescription }
                 }
             }
             // Publish ownership before launch: even an immediately exiting child must
             // be able to clear the matching operation without a later busy=true write.
             child = process; busy = true
-            status = scan ? "곡을 검색하고 있습니다…" : "게임 실행 중"
+            status = tables ? "난이도표를 다운로드하고 있습니다…" : (scan ? "곡을 검색하고 있습니다…" : "게임 실행 중")
             try process.run()
         } catch {
             child = nil; busy = false; status = "실행하지 못했습니다"

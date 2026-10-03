@@ -23,20 +23,27 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 	private final Thread mixer;
 	private AudioDevice device;
 	private long idcount;
-	private boolean stop;
+	private volatile boolean stop;
 
 	public GdxAudioDeviceDriver(Config config) {
 		super(config.getSongResourceGen());
 		AudioConfig audioConfig = config.getAudioConfig();
-		setSampleRate(audioConfig.getSampleRate() > 0 ? audioConfig.getSampleRate() : 44100);
+		setSampleRate(audioConfig.getSampleRate() > 0 ? audioConfig.getSampleRate()
+                : audioConfig.getDriver() == AudioConfig.DriverType.CoreAudio
+                    ? CoreAudioDevice.defaultSampleRate() : 44100);
 		channels = 2;
 
-		if (Gdx.audio == null) {
-			throw new IllegalStateException("GdxAudioDeviceDriver requires libGDX audio to be enabled.");
-		}
-		device = Gdx.audio.newAudioDevice(getSampleRate(), channels == 1);
-		channels = device.isMono() ? 1 : 2;
-		int framesPerBuffer = getFramesPerBuffer(audioConfig.getDeviceBufferSize());
+        boolean coreAudio = audioConfig.getDriver() == AudioConfig.DriverType.CoreAudio;
+        int framesPerBuffer = coreAudio
+                ? Math.max(32, Math.min(16384, audioConfig.getDeviceBufferSize()))
+                : getFramesPerBuffer(audioConfig.getDeviceBufferSize());
+        if (coreAudio) {
+            device = new CoreAudioDevice(getSampleRate(), framesPerBuffer);
+        } else {
+            if (Gdx.audio == null) throw new IllegalStateException("libGDX audio is disabled");
+            device = Gdx.audio.newAudioDevice(getSampleRate(), false);
+        }
+        channels = device.isMono() ? 1 : 2;
 		buffer = new short[framesPerBuffer * channels];
 		inputs = new MixerInput[audioConfig.getDeviceSimultaneousSources()];
 		for (int i = 0; i < inputs.length; i++) {
@@ -51,7 +58,7 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 				+ ", simultaneousSources=" + inputs.length
 				+ ", latency=" + device.getLatency());
 
-		mixer = new Thread(this, "GdxAudioDevice Mixer");
+		mixer = new Thread(this, coreAudio ? "Core Audio Mixer" : "GdxAudioDevice Mixer");
 		mixer.setPriority(Thread.MAX_PRIORITY);
 		mixer.start();
 	}
@@ -176,7 +183,8 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 			try {
 				device.writeSamples(buffer, 0, buffer.length);
 			} catch (Throwable e) {
-				Logger.getGlobal().warning("GdxAudioDevice writeSamples failed : " + e.getMessage());
+				if (!stop) Logger.getGlobal().severe("Audio output stopped: " + e.getMessage());
+                stop = true;
 			}
 		}
 	}
@@ -254,16 +262,12 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 
 	@Override
 	public void dispose() {
-		super.dispose();
-		stop = true;
-		long start = System.currentTimeMillis();
-		while (mixer.isAlive() && System.currentTimeMillis() - start < 1000) {
-			Thread.yield();
-		}
-		if (device != null) {
-			device.dispose();
-			device = null;
-		}
+        stop = true;
+        // Native writes time out after one second, so shutdown cannot wait indefinitely.
+        try { mixer.join(1500); }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        if (device != null) device.dispose();
+        super.dispose();
 	}
 
 	private static class MixerInput {

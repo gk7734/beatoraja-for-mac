@@ -254,6 +254,10 @@ public class BMSPlayerInputProcessor {
 		}
 		
 		int kbcount = setPlayConfig0(kbkeys,  exclusive);
+        int[] secondary = playconfig.getKeyboardConfig().getSecondaryKeyAssign();
+        for (int i = 0; i < secondary.length; i++) {
+            if (!exclusive[i] && secondary[i] >= 0) { exclusive[i] = true; kbcount++; }
+        }
 		
 		int[][] cokeys = new int[playconfig.getController().length][];
 		int cocount = 0;

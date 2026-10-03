@@ -260,7 +260,8 @@ struct SettingsPage: View {
     var audio: some View {
         Group {
             Section("출력") {
-                choice("오디오 출력", "s.audio.driver", [("OpenAL","OpenAL"),("PortAudio","Core Audio (PortAudio)")])
+                choice("오디오 출력", "s.audio.driver", [("CoreAudio","Apple Core Audio"),("OpenAL","OpenAL"),("PortAudio","Core Audio (PortAudio)")])
+                if store.value("s.audio.driver") as? String == "CoreAudio" { Text("macOS 기본 출력 장치를 사용합니다. 출력 장치는 시스템 설정에서 변경할 수 있습니다.").font(.caption).foregroundStyle(.secondary) }
                 if store.value("s.audio.driver") as? String == "PortAudio" { TextField("출력 장치 이름 (비워 두면 기본 장치)", text: store.text("s.audio.driverName")) }
                 choice("샘플 레이트", "s.audio.sampleRate", [("0","장치 기본값"),("44100","44,100 Hz"),("48000","48,000 Hz"),("96000","96,000 Hz"),("192000","192,000 Hz")], numeric: true)
                 number("오디오 버퍼 크기", "s.audio.deviceBufferSize", 32...16384, step: 32)
@@ -346,7 +347,7 @@ struct SettingsPage: View {
             Section("게임 스킨") {
                 Picker("화면", selection: $skinIndex) { ForEach([(0,"7키"),(1,"5키"),(2,"14키"),(3,"10키"),(4,"9키"),(5,"곡 선택"),(6,"곡 결정"),(7,"결과"),(8,"키 설정"),(9,"스킨 선택"),(15,"코스 결과"),(16,"24키"),(17,"48키")], id: \.0) { Text($0.1).tag($0.0) } }
                 SkinPath(index: skinIndex)
-                Text("세부 스킨 옵션은 게임의 스킨 설정 화면에서도 조절할 수 있습니다.").font(.caption).foregroundStyle(.secondary)
+                Text("곡 선택 화면에서 F12(필요하면 Fn+F12)를 누르면 세부 스킨 설정을 열 수 있습니다.").font(.caption).foregroundStyle(.secondary)
             }
             Section("사운드") { TextField("배경음 폴더", text: store.text("s.bgmpath")); TextField("효과음 폴더", text: store.text("s.soundpath")) }
         }
@@ -388,9 +389,16 @@ struct SettingsPage: View {
                 HStack { Text(url).font(.callout).lineLimit(2).textSelection(.enabled); Spacer(); Button { var copy = urls; copy.remove(at: i); store.set("s.tableURL", copy) } label: { Image(systemName: "minus.circle") }.buttonStyle(.borderless).help("주소 제거") }
             }
             HStack { TextField("https://…", text: $tableURL); Button("추가") {
-                if let url = URL(string: tableURL), ["https","http"].contains(url.scheme), !urls.contains(tableURL) { store.set("s.tableURL", urls + [tableURL]); tableURL = "" }
+                let address = tableURL.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let url = URL(string: address), ["https","http"].contains(url.scheme), url.host != nil, !urls.contains(address) {
+                    store.set("s.tableURL", urls + [address]); tableURL = ""
+                    store.run(tables: true, tableURL: address)
+                }
                 else { store.error = "올바른 http 또는 https 주소를 입력해 주세요." }
-            }.disabled(tableURL.isEmpty) }
+            }.disabled(tableURL.isEmpty || store.busy) }
+            Button("난이도표 모두 갱신") { store.run(tables: true) }.disabled(urls.isEmpty || store.busy)
+            Text("주소를 추가하면 표 데이터를 다운로드합니다. 갱신 후 게임을 시작하면 곡 선택에 난이도표 폴더가 나타납니다. 곡 파일은 별도로 필요합니다.")
+                .font(.caption).foregroundStyle(.secondary)
         }
     }
     var stream: some View {

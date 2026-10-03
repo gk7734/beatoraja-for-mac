@@ -72,6 +72,10 @@ public final class MacHidKeyboard {
 		MacHidKeyboard.focused = focused;
 	}
 
+	static boolean isFocused() {
+		return focused;
+	}
+
 	/** Starts the HID thread. Returns null when unavailable, in which case callers keep using GLFW. */
 	static MacHidKeyboard start() {
 		if (!System.getProperty("os.name", "").startsWith("Mac") || !(Gdx.input instanceof DefaultLwjgl3Input input)) {

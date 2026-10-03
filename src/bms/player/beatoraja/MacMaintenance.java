@@ -24,6 +24,11 @@ public final class MacMaintenance {
             return;
         }
         Config config = Config.read();
+        if (args.length >= 1 && args[0].equals("--tables")) {
+            String[] urls = args.length == 2 ? new String[]{args[1]} : config.getTableURL();
+            if (!MacTableUpdater.update(config, urls)) System.exit(1);
+            return;
+        }
         if (args.length != 1 || (!args[0].equals("--scan") && !args[0].equals("--rebuild")))
             throw new IllegalArgumentException("Unknown maintenance operation");
         Class.forName("org.sqlite.JDBC");

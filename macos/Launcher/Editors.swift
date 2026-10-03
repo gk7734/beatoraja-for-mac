@@ -8,6 +8,8 @@ struct KeyBindings: View {
     @State private var monitor: Any?
     private var key: String { "p.\(mode).keyboard.keys" }
     private var codes: [Int] { store.value(key) as? [Int] ?? [] }
+    private var secondaryKey: String { "p.\(mode).keyboard.secondaryKeys" }
+    private var secondaryCodes: [Int] { store.value(secondaryKey) as? [Int] ?? [] }
     static let special: [(Int, String)] = [(-1,"미지정"),(19,"↑"),(20,"↓"),(21,"←"),(22,"→"),(59,"왼쪽 Shift"),(60,"오른쪽 Shift"),(129,"왼쪽 Control"),(130,"오른쪽 Control"),(57,"왼쪽 Option"),(58,"오른쪽 Option"),(61,"Tab"),(62,"Space"),(66,"Return"),(67,"Delete"),(68,"`"),(69,"-"),(70,"="),(71,"["),(72,"]"),(73,"\\"),(74,";"),(75,"'"),(55,","),(56,"."),(76,"/"),(111,"Esc")]
     static func name(_ code: Int) -> String {
         if (29...54).contains(code) { return String(UnicodeScalar(code - 29 + 65)!) }
@@ -16,14 +18,14 @@ struct KeyBindings: View {
     }
     var body: some View {
         VStack(spacing: 12) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180))], spacing: 12) {
                 ForEach(Array(codes.enumerated()), id: \.offset) { i, code in
                     VStack(alignment: .leading, spacing: 6) {
                         Text("입력 \(i + 1)").font(.caption).foregroundStyle(.secondary)
-                        Menu(Self.name(code)) {
-                            Button("키를 눌러 지정…") { begin(i) }
-                            ForEach(Self.special, id: \.0) { code, name in Button(name) { assign(i, code) } }
-                        }.frame(maxWidth: .infinity)
+                        HStack {
+                            bindingMenu("기본 키", i, code, false)
+                            bindingMenu("서브키", i, secondaryCodes.indices.contains(i) ? secondaryCodes[i] : -1, true)
+                        }
                     }
                 }
             }
@@ -46,9 +48,24 @@ struct KeyBindings: View {
             ForEach((29...54).map { ($0, Self.name($0)) } + Self.special, id: \.0) { Text($0.1).tag(String($0.0)) }
         }
     }
-    func assign(_ i: Int, _ code: Int) { var copy = codes; guard copy.indices.contains(i) else { return }; copy[i] = code; store.set(key, copy) }
+    func bindingMenu(_ label: String, _ i: Int, _ code: Int, _ secondary: Bool) -> some View {
+        VStack(alignment: .leading) {
+            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Menu(Self.name(code)) {
+                Button("키를 눌러 지정…") { begin(i, secondary) }
+                ForEach(Self.special, id: \.0) { code, name in Button(name) { assign(i, code, secondary) } }
+            }.frame(maxWidth: .infinity)
+        }
+    }
+    func assign(_ i: Int, _ code: Int, _ secondary: Bool) {
+        var copy = secondary ? secondaryCodes : codes
+        while copy.count < codes.count { copy.append(-1) }
+        guard copy.indices.contains(i) else { return }
+        copy[i] = code
+        store.set(secondary ? secondaryKey : key, copy)
+    }
     func finish() { if let monitor { NSEvent.removeMonitor(monitor) }; monitor = nil; target = nil }
-    func begin(_ i: Int) {
+    func begin(_ i: Int, _ secondary: Bool) {
         target = i
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             let physical: [UInt16: Int] = [53:111,123:21,124:22,125:20,126:19,36:66,48:61,49:62,51:67,50:68,27:69,24:70,33:71,30:72,42:73,41:74,39:75,43:55,47:56,44:76]
@@ -57,7 +74,7 @@ struct KeyBindings: View {
                 if (65...90).contains(scalar.value) { code = Int(scalar.value) - 65 + 29 }
                 else if (48...57).contains(scalar.value) { code = Int(scalar.value) - 48 + 7 }
             }
-            if let code { assign(i, code); finish(); return nil }
+            if let code { assign(i, code, secondary); finish(); return nil }
             return event
         }
     }

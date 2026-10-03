@@ -56,6 +56,8 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	 * キーの最少入力間隔(ms)
 	 */
 	private int duration;
+    private KeyboardLaneBindings laneBindings;
+	private int[] secondaryKeys = new int[0];
 	/**
 	 * Direct HID keyboard input on macOS, or null to read keys from GLFW only.
 	 */
@@ -65,6 +67,11 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	 * macOS maps differently on this keyboard layout can never trigger the wrong lane.
 	 */
 	private final boolean[] hidVerified = new boolean[256];
+	/**
+	 * HID key state as of the event currently being replayed, so a lane combining two keys sees
+	 * the other key as it was at that moment rather than its latest state.
+	 */
+	private final boolean[] hidReplayState = new boolean[256];
 
 	public KeyBoardInputProcesseor(BMSPlayerInputProcessor bmsPlayerInputProcessor, KeyboardConfig config, Resolution resolution) {
 		super(bmsPlayerInputProcessor, Type.KEYBOARD);
@@ -80,6 +87,8 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 
 	public void setConfig(KeyboardConfig config) {
 		this.keys = config.getKeyAssign().clone();
+        this.laneBindings = new KeyboardLaneBindings(keys, config.getSecondaryKeyAssign());
+		this.secondaryKeys = KeyboardLaneBindings.normalize(config.getSecondaryKeyAssign(), keys.length);
 		this.duration = config.getDuration();
 		this.control = new int[] { config.getStart(), config.getSelect() };
 		mouseScratchInput.setConfig(config);
@@ -102,6 +111,7 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		// Arrays.fill(keystate, false);
 		Arrays.fill(keytime, Long.MIN_VALUE);
 		lastPressedKey = -1;
+        laneBindings.clear();
 		mouseScratchInput.clear();
 	}
 
@@ -119,28 +129,22 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 					continue;
 				}
 				final long time = Math.min(microtime, event.nanos() / 1000 - starttime);
+				hidReplayState[event.keycode()] = event.pressed();
 				for (int i = 0; i < keys.length; i++) {
-					if (keys[i] == event.keycode()) {
-						updateLane(i, event.pressed(), time);
+					if (keys[i] == event.keycode() || secondaryKeys[i] == event.keycode()) {
+						updateLane(i, time, this::isReplayKeyDown);
 					}
 				}
 			}
 		}
 		if (!textmode) {
 			for (int i = 0; i < keys.length; i++) {
-				if(keys[i] < 0) {
-					continue;
+				if (hid != null) {
+					verifyHidKey(hid, keys[i]);
+					verifyHidKey(hid, secondaryKeys[i]);
 				}
-				if (hid != null && hidVerified[keys[i]]) {
-					// Catches changes the duration filter dropped above, and focus loss.
-					updateLane(i, hid.isPressed(keys[i]), microtime);
-					continue;
-				}
-				final boolean pressed = Gdx.input.isKeyPressed(keys[i]);
-				if (hid != null && pressed && hid.isPressed(keys[i])) {
-					hidVerified[keys[i]] = true;
-				}
-				updateLane(i, pressed, microtime);
+				// For HID keys this also catches changes the duration filter dropped above, and focus loss.
+				updateLane(i, microtime, this::isKeyDownNow);
 			}
 
 			final boolean startpressed = Gdx.input.isKeyPressed(control[0]);
@@ -167,14 +171,26 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		mouseScratchInput.poll(microtime);
 	}
 
-	private void updateLane(int i, boolean pressed, long time) {
-		final int key = keys[i];
-		if (pressed != keystate[key] && time >= keytime[key] + duration * 1000) {
-			keystate[key] = pressed;
-			keytime[key] = time;
-			this.bmsPlayerInputProcessor.keyChanged(this, time, i, pressed);
+	private void updateLane(int i, long time, java.util.function.IntPredicate pressed) {
+		if (laneBindings.update(i, time, duration * 1000L, pressed)) {
+			this.bmsPlayerInputProcessor.keyChanged(this, time, i, laneBindings.isDown(i));
 			this.bmsPlayerInputProcessor.setAnalogState(i, false, 0);
 		}
+	}
+
+	private void verifyHidKey(MacHidKeyboard hid, int key) {
+		if (key >= 0 && !hidVerified[key] && Gdx.input.isKeyPressed(key) && hid.isPressed(key)) {
+			hidVerified[key] = true;
+			hidReplayState[key] = true;
+		}
+	}
+
+	private boolean isKeyDownNow(int key) {
+		return hid != null && hidVerified[key] ? hid.isPressed(key) : Gdx.input.isKeyPressed(key);
+	}
+
+	private boolean isReplayKeyDown(int key) {
+		return hidVerified[key] ? hidReplayState[key] && MacHidKeyboard.isFocused() : Gdx.input.isKeyPressed(key);
 	}
 
 	private int currentlyHeldModifiers() {

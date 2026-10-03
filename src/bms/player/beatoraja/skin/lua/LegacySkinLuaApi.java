@@ -63,6 +63,25 @@ final class LegacySkinLuaApi {
 		globals.package_.setIsLoaded("debug", debug);
 	}
 
+    /** Header discovery needs the same read-only input facade as runtime loading.
+     * Do not expose file constructors, networking, or arbitrary Java reflection here. */
+    static void installForHeader(Globals globals) {
+        LuaTable luajava = new LuaTable();
+        luajava.set("bindClass", new OneArgFunction() {
+            @Override public LuaValue call(LuaValue className) {
+                return switch (className.checkjstring()) {
+                    case "com.badlogic.gdx.Gdx" -> gdxFacade();
+                    case "com.badlogic.gdx.Input" -> inputClassFacade();
+                    case "com.badlogic.gdx.controllers.Controllers" -> controllersFacade();
+                    case "com.badlogic.gdx.controllers.Controller" -> classFacade(className.tojstring());
+                    default -> throw new LuaError("Lua skin header class access denied: " + className);
+                };
+            }
+        });
+        globals.set("luajava", luajava);
+        globals.package_.setIsLoaded("luajava", luajava);
+    }
+
 	private static final class BindClassFunction extends OneArgFunction {
 		@Override
 		public LuaValue call(LuaValue className) {

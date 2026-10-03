@@ -256,6 +256,12 @@ public final class PlayModeConfig {
      * @author exch
      */
     public static final class KeyboardConfig {
+        private int[] secondaryKeys;
+        public int[] getSecondaryKeyAssign() {
+            return bms.player.beatoraja.input.KeyboardLaneBindings.normalize(secondaryKeys, keys.length);
+        }
+        public void setSecondaryKeyAssign(int[] keys) { secondaryKeys = keys; }
+
         /**
          * マウス皿設定
          */
