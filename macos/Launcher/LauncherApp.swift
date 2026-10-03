@@ -247,6 +247,8 @@ struct SettingsPage: View {
                 choice("해상도", "s.resolution", resolutionOptions)
                 toggle("수직 동기화", "s.vsync")
                 number("최대 프레임 수 (0은 제한 없음)", "s.maxFramePerSecond", 0...2000)
+                // Measured: with vsync off, 0 drew ~950 FPS on a 75Hz display and added ~30-55% GPU load.
+                Text("수직 동기화를 끄고 0(제한 없음)으로 두면 모니터 주사율보다 훨씬 많이 그려 발열이 크게 늘어납니다. 키보드 직접 입력을 쓰면 수직 동기화를 켜도 키보드 판정은 손해가 없습니다.").font(.caption).foregroundStyle(.secondary)
                 toggle("Retina 고해상도 렌더링", "s.hiDpiRendering")
                 Text("끄면 화면을 1배 밀도로 그린 뒤 확대합니다. GPU 부하와 발열이 크게 줄고, 대부분의 스킨에서는 차이가 거의 보이지 않습니다.").font(.caption).foregroundStyle(.secondary)
             }
