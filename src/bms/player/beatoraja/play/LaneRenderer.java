@@ -290,7 +290,12 @@ public class LaneRenderer {
 		float offsetY = 0;
 		float offsetW = 0;
 		float offsetH= 0;
+		// hl below already starts at the lifted judge line; a LIFT offset on the notes object would lift them twice
+		final SkinOffset lift = main.main.getOffset(OFFSET_LIFT);
 		for(SkinOffset offset : offsets) {
+			if(offset == null || offset == lift) {
+				continue;
+			}
 			offsetX += offset.x;
 			offsetY += offset.y;
 			offsetW += offset.w;
