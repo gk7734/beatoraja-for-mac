@@ -34,6 +34,10 @@ import bms.player.beatoraja.song.SongResources;
  */
 public class PixmapResourcePool extends ResourcePool<String, PixmapResourcePool.PixmapResource> {
 	private final java.util.concurrent.ConcurrentHashMap<String, SongResource> songResources = new java.util.concurrent.ConcurrentHashMap<>();
+	/**
+	 * デコード済み画像のディスクキャッシュ。nullの場合は使用しない
+	 */
+	private DecodedImageCache diskCache;
 
 	public static final class PixmapResource {
 		private final Pixmap pixmap;
@@ -93,10 +97,20 @@ public class PixmapResourcePool extends ResourcePool<String, PixmapResourcePool.
 		super(maxgen);
 	}
 	
+	/**
+	 * ローカルファイルの画像をデコード済みの形でディスクにキャッシュする
+	 *
+	 * @param diskCache ディスクキャッシュ。nullの場合は使用しない
+	 */
+	public void setDiskCache(DecodedImageCache diskCache) {
+		this.diskCache = diskCache;
+	}
+
 	@Override
 	protected PixmapResource load(String path) {
 		SongResource songResource = songResources.get(path);
-		final PixmapResource resource = songResource != null ? loadPictureResource(songResource) : loadPictureResource(path);
+		final PixmapResource resource = songResource != null ? loadPictureResource(songResource)
+				: diskCache != null ? diskCache.load(path, PixmapResourcePool::loadPictureResource) : loadPictureResource(path);
 		return resource != null ? convert(resource) : null;
 	}
 
@@ -140,6 +154,12 @@ public class PixmapResourcePool extends ResourcePool<String, PixmapResourcePool.
 	@Override
 	protected void dispose(PixmapResource resource) {
 		resource.dispose();
+	}
+
+	@Override
+	protected long sizeOf(PixmapResource resource) {
+		final Pixmap pixmap = resource.getPixmap();
+		return pixmap != null ? pixmap.getPixels().capacity() : 0;
 	}
 
 	/**

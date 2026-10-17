@@ -295,6 +295,11 @@ public final class MainController {
 		final long t = System.currentTimeMillis();
 		sprite = new SpriteBatch();
 		SkinLoader.initPixmapResourcePool(config.getSkinPixmapGen());
+		SkinLoader.getResource().setMaxBytes(config.getSkinPixmapCacheMB() * 1024L * 1024L);
+		if (config.getSkinImageDiskCacheMB() > 0) {
+			SkinLoader.getResource().setDiskCache(new DecodedImageCache(DecodedImageCache.defaultDirectory(),
+					config.getSkinImageDiskCacheMB() * 1024L * 1024L));
+		}
 
 		try {
 			FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(config.getSystemfontpath()));

@@ -179,6 +179,16 @@ public class Config implements Validatable {
 	private SongArchiveExtractMode songArchiveExtractMode = SongArchiveExtractMode.NO_TEMPORARY_FILES;
 
 	private int skinPixmapGen = 4;
+	/**
+	 * Upper bound (MB) of decoded skin images kept in memory after their textures are created.
+	 * Older images beyond it are released and decoded again when a later scene needs them. 0 = unlimited.
+	 */
+	private int skinPixmapCacheMB = 512;
+	/**
+	 * Upper bound (MB) of decoded skin images kept on disk, so images released from memory are read back
+	 * instead of decoded again on later screen changes. 0 = disabled.
+	 */
+	private int skinImageDiskCacheMB = 8192;
 	private int stagefilePixmapGen = 2;
 	private int bannerPixmapGen = 2;
 	private int songResourceGen = 1;
@@ -473,6 +483,22 @@ public class Config implements Validatable {
 		this.skinPixmapGen = skinPixmapGen;
 	}
 
+	public int getSkinPixmapCacheMB() {
+		return skinPixmapCacheMB;
+	}
+
+	public void setSkinPixmapCacheMB(int skinPixmapCacheMB) {
+		this.skinPixmapCacheMB = skinPixmapCacheMB;
+	}
+
+	public int getSkinImageDiskCacheMB() {
+		return skinImageDiskCacheMB;
+	}
+
+	public void setSkinImageDiskCacheMB(int skinImageDiskCacheMB) {
+		this.skinImageDiskCacheMB = skinImageDiskCacheMB;
+	}
+
 	public int getStagefilePixmapGen() {
 		return stagefilePixmapGen;
 	}
@@ -594,6 +620,8 @@ public class Config implements Validatable {
 		frameskip = MathUtils.clamp(frameskip, 0, 10);
 
 		skinPixmapGen = MathUtils.clamp(skinPixmapGen, 0, 100);
+		skinPixmapCacheMB = MathUtils.clamp(skinPixmapCacheMB, 0, 65536);
+		skinImageDiskCacheMB = MathUtils.clamp(skinImageDiskCacheMB, 0, 1048576);
 		stagefilePixmapGen = MathUtils.clamp(stagefilePixmapGen, 0, 100);
 		bannerPixmapGen = MathUtils.clamp(bannerPixmapGen, 0, 100);
 		songResourceGen = MathUtils.clamp(songResourceGen, 0, 100);

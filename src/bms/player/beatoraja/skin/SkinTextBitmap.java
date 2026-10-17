@@ -345,8 +345,10 @@ public final class SkinTextBitmap extends SkinText {
 		private static final int FULLWIDTH_TILDE = 0xff5e;
 		private static final int[] MISSING_GLYPH_CANDIDATES = { 0x25a1, 0x25a2, 0x2610, 0x25a0, '?' }; // □, ▢, ☐, ■, ?
 
+		// Mipmaps are off by default: skins never draw with a MipMap filter, and on macOS each mipmapped
+		// texture also keeps a CPU-side copy in the OpenGL driver (2048px font pages: ~21MB GPU + ~21MB RAM each).
 		public SkinTextBitmapSource(Path fontPath, boolean usecim) {
-			this(fontPath, usecim, true);
+			this(fontPath, usecim, false);
 		}
 
 		public SkinTextBitmapSource(Path fontPath, boolean usecim, boolean useMipMaps) {
@@ -354,7 +356,7 @@ public final class SkinTextBitmap extends SkinText {
 		}
 
 		public SkinTextBitmapSource(Path fontPath, Path[] fallbackFontPaths, boolean usecim) {
-			this(fontPath, fallbackFontPaths, usecim, true);
+			this(fontPath, fallbackFontPaths, usecim, false);
 		}
 
 		public SkinTextBitmapSource(Path fontPath, Path[] fallbackFontPaths, boolean usecim, boolean useMipMaps) {
@@ -362,7 +364,7 @@ public final class SkinTextBitmap extends SkinText {
 		}
 
 		public SkinTextBitmapSource(Path fontPath, FallbackFont[] fallbackFonts, boolean usecim) {
-			this(fontPath, fallbackFonts, usecim, true);
+			this(fontPath, fallbackFonts, usecim, false);
 		}
 
 		public SkinTextBitmapSource(Path fontPath, FallbackFont[] fallbackFonts, boolean usecim, boolean useMipMaps) {
