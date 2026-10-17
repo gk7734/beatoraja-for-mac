@@ -24,6 +24,8 @@ import bms.player.beatoraja.select.MusicSelector;
 import bms.player.beatoraja.select.bar.Bar;
 import bms.player.beatoraja.select.bar.DirectoryBar;
 import bms.player.beatoraja.skin.*;
+import bms.player.beatoraja.song.NotesRadar;
+import bms.player.beatoraja.song.NotesRadarAccessor;
 import bms.player.beatoraja.song.SongData;
 
 public class IntegerPropertyFactory {
@@ -466,6 +468,13 @@ public class IntegerPropertyFactory {
 				+ state.getJudgeCount(4, true) + state.getJudgeCount(4, false) + state.getJudgeCount(5, true)
 				+ state.getJudgeCount(5, false))),
 
+		notesradar_notes(650, createNotesRadarProperty(NotesRadar.NOTES)),
+		notesradar_chord(651, createNotesRadarProperty(NotesRadar.CHORD)),
+		notesradar_peak(652, createNotesRadarProperty(NotesRadar.PEAK)),
+		notesradar_scratch(653, createNotesRadarProperty(NotesRadar.SCRATCH)),
+		notesradar_soflan(654, createNotesRadarProperty(NotesRadar.SOFLAN)),
+		notesradar_charge(655, createNotesRadarProperty(NotesRadar.CHARGE)),
+
 		judge_duration1(525, createJudgeduration(0)),
 		judge_duration2(526, createJudgeduration(1)),
 		judge_duration3(527, createJudgeduration(2)),
@@ -491,6 +500,13 @@ public class IntegerPropertyFactory {
 		private ValueType(int id, IntegerProperty property) {
 			this.id = id;
 			this.property = property;
+		}
+
+		/**
+		 * ノーツレーダーの値(0-200)。解析中は0
+		 */
+		private static IntegerProperty createNotesRadarProperty(int index) {
+			return (state) -> (int) Math.round(NotesRadarAccessor.get(state).get(index));
 		}
 
 		private static IntegerProperty getProperty(int id) {

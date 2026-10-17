@@ -1,7 +1,11 @@
 package bms.player.beatoraja.skin.lua;
 
 import bms.player.beatoraja.MainState;
+import bms.player.beatoraja.config.SkinConfiguration;
 import bms.player.beatoraja.play.BMSPlayer;
+import bms.player.beatoraja.song.NotesRadar;
+import bms.player.beatoraja.song.NotesRadarAccessor;
+import bms.player.beatoraja.song.PlayerNotesRadar;
 import bms.player.beatoraja.skin.SkinObject;
 import bms.player.beatoraja.skin.SkinPropertyMapper;
 import bms.player.beatoraja.skin.property.*;
@@ -62,6 +66,26 @@ final class MainStatePropertyLuaApiExporter implements LuaApiExporter {
 		table.set("volume_bg", zeroArg(() -> LuaDouble.valueOf(state.main.getConfig().getAudioConfig().getBgvolume())));
 		table.set("gauge", zeroArg(this::getGauge));
 		table.set("gauge_type", zeroArg(this::getGaugeType));
+		table.set("notes_radar", zeroArg(() -> toLuaTable(NotesRadarAccessor.get(state))));
+		table.set("player_notes_radar", zeroArg(() -> {
+			final LuaValue radar = toLuaTable(PlayerNotesRadar.get(state));
+			radar.set("style", LuaValue.valueOf(PlayerNotesRadar.styleOf(state)));
+			final double[] previous = PlayerNotesRadar.getPrevious(state);
+			if (previous != null) {
+				radar.set("previous", toLuaTable(new NotesRadarAccessor.Result("previous", previous)));
+			}
+			return radar;
+		}));
+		// スキン設定画面のプレビュー(SkinPreview)に選択中のスキンが読み込まれている場合にtrue。プレビュー用の表示を
+		// 用意しているスキン(IIDX-light 2.2 など)がこの関数の有無でプレビュー対応エンジンを判別する
+		table.set("native_preview_available", zeroArg(() -> LuaBoolean.valueOf(
+				state instanceof SkinConfiguration configuration && configuration.getSelectedSkin() != null)));
+		table.set("player_notes_radar_ranking", new OneArgFunction() {
+			@Override
+			public LuaValue call(LuaValue name) {
+				return getPlayerNotesRadarRanking(name.optjstring(""));
+			}
+		});
 
 		table.set("set_volume_sys", new OneArgFunction() {
 			@Override
@@ -114,6 +138,56 @@ final class MainStatePropertyLuaApiExporter implements LuaApiExporter {
 			return LuaDouble.valueOf(player.getGauge().getType());
 		}
 		return LuaInteger.ZERO;
+	}
+
+	/**
+	 * プレイヤーのノーツレーダーの項目の上位曲。{{value, title, level, difficulty, current}, ...}(値の高い順)。
+	 * currentは現在の譜面(選曲中/プレイした譜面)と同じ楽曲の場合にtrue
+	 *
+	 * @param name 項目名(notes, chord, peak, scratch, soflan, charge)
+	 */
+	private LuaValue getPlayerNotesRadarRanking(String name) {
+		final int index = switch (name) {
+			case "notes" -> NotesRadar.NOTES;
+			case "chord" -> NotesRadar.CHORD;
+			case "peak" -> NotesRadar.PEAK;
+			case "scratch" -> NotesRadar.SCRATCH;
+			case "soflan" -> NotesRadar.SOFLAN;
+			case "charge" -> NotesRadar.CHARGE;
+			default -> -1;
+		};
+		final LuaTable result = new LuaTable();
+		if (index < 0) {
+			return result;
+		}
+		final String current = state.resource != null ? PlayerNotesRadar.songOf(state.resource.getSongdata()) : null;
+		int i = 1;
+		for (PlayerNotesRadar.RankEntry entry : PlayerNotesRadar.getRanking(state, index)) {
+			final LuaTable row = new LuaTable();
+			row.set("value", LuaDouble.valueOf(entry.value()));
+			row.set("title", LuaValue.valueOf(entry.title() != null ? entry.title() : ""));
+			row.set("level", LuaInteger.valueOf(entry.level()));
+			row.set("difficulty", LuaInteger.valueOf(entry.difficulty()));
+			row.set("current", LuaBoolean.valueOf(current != null && current.equals(entry.song())));
+			result.set(i++, row);
+		}
+		return result;
+	}
+
+	/**
+	 * ノーツレーダーのLuaテーブル。{ready, analyzing, notes, chord, peak, scratch, soflan, charge}(値は0-200)
+	 */
+	private static LuaValue toLuaTable(NotesRadarAccessor.Result radar) {
+		final LuaTable result = new LuaTable();
+		result.set("ready", LuaBoolean.valueOf(radar.isReady()));
+		result.set("analyzing", LuaBoolean.valueOf(radar.isAnalyzing()));
+		result.set("notes", LuaDouble.valueOf(radar.get(NotesRadar.NOTES)));
+		result.set("chord", LuaDouble.valueOf(radar.get(NotesRadar.CHORD)));
+		result.set("peak", LuaDouble.valueOf(radar.get(NotesRadar.PEAK)));
+		result.set("scratch", LuaDouble.valueOf(radar.get(NotesRadar.SCRATCH)));
+		result.set("soflan", LuaDouble.valueOf(radar.get(NotesRadar.SOFLAN)));
+		result.set("charge", LuaDouble.valueOf(radar.get(NotesRadar.CHARGE)));
+		return result;
 	}
 
 	private static <T> T getProperty(LuaValue value, IntFunction<T> byId, Function<String, T> byName,

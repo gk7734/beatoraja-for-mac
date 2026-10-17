@@ -39,6 +39,7 @@ public class JsonSkin {
 		public HitErrorVisualizer[] hiterrorvisualizer = new HitErrorVisualizer[0];
 		public TimingVisualizer[] timingvisualizer = new TimingVisualizer[0];
 		public TimingDistributionGraph[] timingdistributiongraph = new TimingDistributionGraph[0];
+		public RadarGraph[] radargraph = new RadarGraph[0];
 		public NoteSet note;
 		public Gauge gauge;
 		public HiddenCover[] hiddenCover = new HiddenCover[0];
@@ -95,6 +96,11 @@ public class JsonSkin {
 	public static class Source {
 		public String id;
 		public String path;
+		/**
+		 * ミップマップを生成し、縮小時に3線形補間で描画する。元画像より十分小さく描画する画像向け
+		 * (ミップマップなしでは2倍以上の縮小で階段状になる)
+		 */
+		public boolean mipmap = false;
 	}
 
 	public static class Font {
@@ -318,6 +324,15 @@ public class JsonSkin {
 		public String PRColor = "000000FF";
 		public int transparent = 0;
 		public int drawDecay = 1;
+	}
+
+	public static class RadarGraph {
+		public String id;
+		public String color = "e8402a";
+		/** 譜面の難易度(0: 不明, 1: BEGINNER ... 5: LEGGENDARIA)ごとの塗り色。空の場合はcolor */
+		public String[] colors = new String[0];
+		/** 0: 選択中/プレイ中の譜面, 1: プレイヤー(PLAYER NOTES RADAR) */
+		public int type = 0;
 	}
 
 	public static class TimingDistributionGraph {

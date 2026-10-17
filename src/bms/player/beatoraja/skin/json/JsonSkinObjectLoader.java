@@ -504,6 +504,11 @@ public abstract class JsonSkinObjectLoader<S extends Skin> {
 				return st;
 			}
 		}
+		for (JsonSkin.RadarGraph rg : sk.radargraph) {
+			if (dst.id.equals(rg.id)) {
+				return new SkinNotesRadarGraph(rg.color, rg.colors, rg.type == 1);
+			}
+		}
 		
 		// gauge (playskin or resultskin only)
 		if (sk.gauge != null && dst.id.equals(sk.gauge.id)) {
@@ -573,7 +578,7 @@ public abstract class JsonSkinObjectLoader<S extends Skin> {
 		}
 		final File imagefile = SkinLoader.getPath(p.getParent().toString() + "/" + data.path, loader.filemap);
 		if (imagefile.exists()) {
-			data.data = getTexture(imagefile.getPath());
+			data.data = data.mipmap ? SkinLoader.getMipMapTexture(imagefile.getPath(), loader.usecim) : getTexture(imagefile.getPath());
 		}
 		data.loaded = true;
 		

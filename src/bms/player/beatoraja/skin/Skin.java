@@ -612,7 +612,8 @@ public class Skin {
 
 		private void setFilter(Texture image) {
 			if(type == TYPE_LINEAR || type == TYPE_FFMPEG || type == TYPE_DISTANCE_FIELD) {
-				image.setFilter(TextureFilter.Linear, TextureFilter.Linear);
+				// ミップマップ付きのテクスチャ(JsonSkin.Source.mipmap)は縮小フィルタを保つ
+				image.setFilter(image.getMinFilter().isMipMap() ? image.getMinFilter() : TextureFilter.Linear, TextureFilter.Linear);
 			}
 		}
 		

@@ -231,6 +231,19 @@ public final class PlayerResource {
 		return model;
 	}
 
+	/**
+	 * 譜面をデコードする。loadBMSModelと異なりこのリソースの状態(マージン時間等)を変更しないため、別スレッドから呼び出せる
+	 *
+	 * @param f 譜面ファイル
+	 * @param lnmode LNモード
+	 * @return 譜面。読めなかった場合はnull
+	 */
+	public static BMSModel decodeBMSModel(Path f, int lnmode) {
+		final ChartInformation info = new ChartInformation(chartSource(SongResources.fromPath(f)), lnmode, null);
+		final ChartDecoder decoder = ChartDecoder.getDecoder(info.source);
+		return decoder != null ? decoder.decode(info) : null;
+	}
+
 	private static ChartSource chartSource(SongResource resource) {
 		return new ChartSource() {
 			@Override

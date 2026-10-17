@@ -22,6 +22,7 @@ import bms.player.beatoraja.ir.*;
 import bms.player.beatoraja.play.GrooveGauge;
 import bms.player.beatoraja.skin.SkinType;
 import bms.player.beatoraja.skin.property.EventFactory.EventType;
+import bms.player.beatoraja.song.PlayerNotesRadar;
 import bms.player.beatoraja.song.SongData;
 
 /**
@@ -51,6 +52,10 @@ public class MusicResult extends AbstractResult {
 		}
 
 		updateScoreDatabase();
+		if (resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY) {
+			// 保存したスコアでプレイヤーのノーツレーダーを計算し直す(RADARタブの表示用)
+			PlayerNotesRadar.refresh(main);
+		}
 		// リプレイの自動保存
 		if (resource.getPlayMode().mode == BMSPlayerMode.Mode.PLAY) {
 			for (int i = 0; i < REPLAY_SIZE; i++) {

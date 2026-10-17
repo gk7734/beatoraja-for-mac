@@ -129,6 +129,17 @@ public abstract class SkinLoader {
         return imagefile;
     }
 
+    /**
+     * ミップマップ付きで読み込み、縮小時は3線形補間(MipMapLinearLinear)で描画するテクスチャ
+     */
+    public static Texture getMipMapTexture(String path, boolean usecim) {
+        final Texture texture = getTexture(path, usecim, true);
+        if (texture != null) {
+            texture.setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear);
+        }
+        return texture;
+    }
+
     public static Texture getTexture(String path, boolean usecim) {
         return getTexture(path, usecim, false);
     }

@@ -43,11 +43,18 @@ public class JSONSkinLoader extends SkinLoader {
 	
 	protected static class SourceData {
 		public final String path;
+		/** JsonSkin.Source.mipmap */
+		public final boolean mipmap;
 		public boolean loaded = false;
 		public Object data;
 		
 		public SourceData(String path) {
+			this(path, false);
+		}
+
+		public SourceData(String path, boolean mipmap) {
 			this.path = path;
+			this.mipmap = mipmap;
 		}
 	}
 
@@ -297,7 +304,7 @@ public class JSONSkinLoader extends SkinLoader {
 			skin.setScene(sk.scene);
 			
 			for(JsonSkin.Source source : sk.source) {
-				sourceMap.put(source.id, new SourceData(source.path));
+				sourceMap.put(source.id, new SourceData(source.path, source.mipmap));
 			}
 
 			for (JsonSkin.Destination dst : sk.destination) {
@@ -469,7 +476,7 @@ public class JSONSkinLoader extends SkinLoader {
 			 }
 
 			if (!isMovie) {
-				data.data = getTexture(imagefile.getPath());
+				data.data = data.mipmap ? SkinLoader.getMipMapTexture(imagefile.getPath(), usecim) : getTexture(imagefile.getPath());
 			}
 		}
 		data.loaded = true;
