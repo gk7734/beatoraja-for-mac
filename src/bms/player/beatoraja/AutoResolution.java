@@ -13,8 +13,9 @@ import bms.player.beatoraja.Config.DisplayMode;
 /**
  * Chooses the in-game resolution from the system display (Config.autoResolution).
  * Sizes are in points like the game window: fullscreen uses the display mode, a window the largest size that fits
- * the work area (menu bar and Dock excluded) below its title bar. Among the sizes that fit, those with the
- * display's aspect ratio are preferred so a fullscreen picture is not stretched.
+ * the work area (menu bar and Dock excluded) below its title bar. Among the sizes that fit, fullscreen prefers the
+ * display's aspect ratio (the 16:9 skin is centred with bars, Config.keepSkinAspect) and a window 16:9, the skin's
+ * own ratio, so the window has no bars.
  */
 final class AutoResolution {
 
@@ -66,7 +67,8 @@ final class AutoResolution {
 			GLFW.glfwGetMonitorContentScale(monitor, sx, sy);
 			contentScale = sx.get(0);
 		}
-		final Result result = pick(width, height, (double) video.width() / video.height(), contentScale);
+		final double aspect = mode == DisplayMode.WINDOW ? 16.0 / 9.0 : (double) video.width() / video.height();
+		final Result result = pick(width, height, aspect, contentScale);
 		Logger.getGlobal().info(String.format("自動解像度 : %s (%dx%d) display %dx%d area %dx%d scale %.1f%s",
 				result.resolution().name(), result.resolution().width, result.resolution().height, video.width(),
 				video.height(), width, height, contentScale, result.hiDpi() ? " HiDPI" : ""));
@@ -76,7 +78,7 @@ final class AutoResolution {
 	/**
 	 * @param width 使える幅(ポイント)
 	 * @param height 使える高さ(ポイント)
-	 * @param aspect ディスプレイの縦横比
+	 * @param aspect 優先する縦横比
 	 * @param contentScale ディスプレイの画素密度(Retinaは2)
 	 */
 	static Result pick(int width, int height, double aspect, float contentScale) {

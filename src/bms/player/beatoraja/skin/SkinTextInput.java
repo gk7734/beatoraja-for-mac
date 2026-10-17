@@ -183,7 +183,10 @@ class SkinTextInput {
 
 	private void updateBounds(SkinText text) {
 		Rectangle bounds = getBounds(text);
-		textField.setBounds(bounds.x, bounds.y, bounds.width, bounds.height);
+		// the stage is in screen coordinates: add the skin's aspect-fit margin
+		final Skin skin = state != null ? state.getSkin() : null;
+		final float ox = skin != null ? skin.getOffsetX() : 0, oy = skin != null ? skin.getOffsetY() : 0;
+		textField.setBounds(bounds.x + ox, bounds.y + oy, bounds.width, bounds.height);
 	}
 
 	private Rectangle getBounds(SkinText text) {

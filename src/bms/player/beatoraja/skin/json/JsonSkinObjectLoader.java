@@ -399,17 +399,17 @@ public abstract class JsonSkinObjectLoader<S extends Skin> {
 					if(img.value != null) {
 						obj = new SkinSlider(getSourceImage(tex, img.x, img.y, img.w, img.h, img.divx, img.divy),
 								img.timer, img.cycle, img.angle, (int) ((img.angle == 1 || img.angle == 3
-										? ((float)loader.dstr.width / sk.w) : ((float)loader.dstr.height / sk.h)) * img.range),
+										? loader.scaleX : loader.scaleY) * img.range),
 								img.value, img.event);
 					} else if(img.isRefNum) {
 						obj = new SkinSlider(getSourceImage(tex, img.x, img.y, img.w, img.h, img.divx, img.divy),
 								img.timer, img.cycle, img.angle, (int) ((img.angle == 1 || img.angle == 3
-										? ((float)loader.dstr.width / sk.w) : ((float)loader.dstr.height / sk.h)) * img.range),
+										? loader.scaleX : loader.scaleY) * img.range),
 								img.type, img.min, img.max);
 					} else {
 						obj = new SkinSlider(getSourceImage(tex, img.x, img.y, img.w, img.h, img.divx, img.divy),
 								img.timer, img.cycle, img.angle, (int) ((img.angle == 1 || img.angle == 3
-										? ((float)loader.dstr.width / sk.w) : ((float)loader.dstr.height / sk.h)) * img.range),
+										? loader.scaleX : loader.scaleY) * img.range),
 								img.type, img.changeable);
 					}
 				}
@@ -652,7 +652,7 @@ public abstract class JsonSkinObjectLoader<S extends Skin> {
 						source.setType(font.type);
 						loader.bitmapSourceMap.put(font.id, source);
 					}
-					skinText = new SkinTextBitmap(loader.bitmapSourceMap.get(font.id), text.size * ((float)loader.dstr.width / loader.sk.w), property);
+					skinText = new SkinTextBitmap(loader.bitmapSourceMap.get(font.id), text.size * loader.scaleX, property);
 				} else {
 					String[] fallbackPaths = new String[font.fallback.length];
 					for (int i = 0; i < font.fallback.length; i++) {

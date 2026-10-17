@@ -161,6 +161,7 @@ public class MainLoader extends Application {
 			System.exit(1);
 		}
 
+		bms.player.beatoraja.skin.Skin.setKeepAspect(config.isKeepSkinAspect());
 		boolean hiDpiRendering = config.isHiDpiRendering();
 		if (config.isAutoResolution()) {
 			try {

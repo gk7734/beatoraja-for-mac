@@ -63,6 +63,36 @@ public class Skin {
 	 * 元データからの高さ比率
 	 */
 	private final float dh;
+	/**
+	 * 縦横比を保って描画する場合の余白(左、下)。スキン座標はこの分ずらして描画する
+	 */
+	private final float offsetX;
+	private final float offsetY;
+
+	/**
+	 * beatorajaスキン(JSON/Lua)を元の縦横比のまま描画するか(Config.keepSkinAspect)。falseの場合は解像度に合わせて伸縮する
+	 */
+	private static boolean keepAspect = true;
+
+	public static void setKeepAspect(boolean keep) {
+		keepAspect = keep;
+	}
+
+	/**
+	 * 元の解像度から描画先への拡大率と余白。縦横比を保つ場合は小さい方の倍率に揃えて中央に置く
+	 *
+	 * @param lr2 LR2スキン。LR2スキン(4:3)は従来どおり描画先に合わせて伸縮する
+	 * @return {横の倍率, 縦の倍率, 左の余白, 下の余白}
+	 */
+	public static float[] fitScale(float orgWidth, float orgHeight, float dstWidth, float dstHeight, boolean lr2) {
+		float sx = dstWidth / orgWidth;
+		float sy = dstHeight / orgHeight;
+		if (!keepAspect || lr2 || Math.abs(sx - sy) < 0.001f) {
+			return new float[] { sx, sy, 0, 0 };
+		}
+		final float s = Math.min(sx, sy);
+		return new float[] { s, s, (dstWidth - orgWidth * s) / 2, (dstHeight - orgHeight * s) / 2 };
+	}
 
 	/**
 	 * 登録されているスキンオブジェクト
@@ -111,8 +141,11 @@ public class Skin {
 		Resolution dst = header.getDestinationResolution();
 		width = dst.width;
 		height = dst.height;
-		dw = ((float)dst.width) / org.width;
-		dh = ((float)dst.height) / org.height;
+		final float[] fit = fitScale(org.width, org.height, dst.width, dst.height, header.getType() == SkinHeader.TYPE_LR2SKIN);
+		dw = fit[0];
+		dh = fit[1];
+		offsetX = fit[2];
+		offsetY = fit[3];
 
 		if(MainController.debug) {
 			tempmap = new HashMap<>(32);
@@ -275,7 +308,28 @@ public class Skin {
 
 	public void drawAllObjects(SpriteBatch sprite, MainState state) {
 		ensureRenderer(sprite, state);
-		
+		final boolean letterbox = pushLetterboxClip();
+		try {
+			drawAllObjects0(state);
+		} finally {
+			if (letterbox) {
+				renderer.popClip();
+			}
+		}
+	}
+
+	/**
+	 * 縦横比を保って描画する場合、スキンの範囲外(余白)に描画しない
+	 */
+	private boolean pushLetterboxClip() {
+		if (offsetX == 0 && offsetY == 0) {
+			return false;
+		}
+		return renderer.pushClip(0, 0, width - offsetX * 2, height - offsetY * 2);
+	}
+
+	private void drawAllObjects0(MainState state) {
+
 		final long microtime = state.timer.getNowMicroTime();
 
 		if (MainController.debug) {
@@ -332,6 +386,17 @@ public class Skin {
 
 	public void drawAllObjectsSafely(SpriteBatch sprite, MainState state) {
 		ensureRenderer(sprite, state);
+		final boolean letterbox = pushLetterboxClip();
+		try {
+			drawAllObjectsSafely0(state);
+		} finally {
+			if (letterbox) {
+				renderer.popClip();
+			}
+		}
+	}
+
+	private void drawAllObjectsSafely0(MainState state) {
 
 		final long microtime = state.timer.getNowMicroTime();
 		if (nextpreparetime <= microtime) {
@@ -381,10 +446,10 @@ public class Skin {
 
 		SkinOffset offsetAll = getOffsetAll(state);
 		if(offsetAll != null) {
-			transform.set(width * offsetAll.x /100, height * offsetAll.y / 100, 0, 0, 0, 0, 0,
+			transform.set(offsetX + width * offsetAll.x /100, offsetY + height * offsetAll.y / 100, 0, 0, 0, 0, 0,
 					(offsetAll.w + 100) / 100, (offsetAll.h + 100) / 100, 1);
 		} else {
-			transform.set(0, 0, 0, 0, 0, 0, 0, 1, 1, 1);
+			transform.set(offsetX, offsetY, 0, 0, 0, 0, 0, 1, 1, 1);
 		}
 		sprite.setTransformMatrix(transform);
 		scissorCamera.setToOrtho(false, width, height);
@@ -392,6 +457,9 @@ public class Skin {
 	}
 
 	public void mousePressed(MainState state, int button, int x, int y) {
+		// 画面座標からスキン座標へ(縦横比を保つ場合の余白)
+		x -= Math.round(offsetX);
+		y -= Math.round(offsetY);
 		if (textInput != null) {
 			textInput.commitIfOutside(x, y);
 		}
@@ -411,6 +479,8 @@ public class Skin {
 	}
 
 	public void mouseDragged(MainState state, int button, int x, int y) {
+		x -= Math.round(offsetX);
+		y -= Math.round(offsetY);
 		for (int i = objectarray.length - 1; i >= 0; i--) {
 			final SkinObject obj = objectarray[i];
 			if (obj instanceof SkinSlider && obj.draw && obj.mousePressed(state, button, x, y)) {
@@ -494,6 +564,16 @@ public class Skin {
 		return height;
 	}
 
+	/** 縦横比を保って描画する場合の左の余白(画面座標) */
+	public float getOffsetX() {
+		return offsetX;
+	}
+
+	/** 縦横比を保って描画する場合の下の余白(画面座標) */
+	public float getOffsetY() {
+		return offsetY;
+	}
+
 	public double getScaleX() {
 		return dw;
 	}
@@ -527,7 +607,9 @@ public class Skin {
 		private Color orgcolor;
 
 		private final Rectangle clipBounds = new Rectangle();
-		private final Rectangle scissors = new Rectangle();
+		/** 入れ子のクリップごとの矩形。ScissorStackは矩形を参照で保持するため使い回さない */
+		private final Array<Rectangle> scissors = new Array<>();
+		private int clipDepth;
 		
 		public SkinObjectRenderer(SpriteBatch sprite, Camera camera) {
 			this.sprite = sprite;
@@ -551,13 +633,22 @@ public class Skin {
 			}
 			sprite.flush();
 			clipBounds.set(x, y, width, height);
-			ScissorStack.calculateScissors(camera, sprite.getTransformMatrix(), clipBounds, scissors);
-			return ScissorStack.pushScissors(scissors);
+			if (clipDepth == scissors.size) {
+				scissors.add(new Rectangle());
+			}
+			final Rectangle scissor = scissors.get(clipDepth);
+			ScissorStack.calculateScissors(camera, sprite.getTransformMatrix(), clipBounds, scissor);
+			if (!ScissorStack.pushScissors(scissor)) {
+				return false;
+			}
+			clipDepth++;
+			return true;
 		}
 
 		public void popClip() {
 			sprite.flush();
 			ScissorStack.popScissors();
+			clipDepth--;
 		}
 
 		public void draw(BitmapFont font, String s, float x, float y, Color c) {

@@ -27,6 +27,10 @@ import bms.player.beatoraja.video.VideoFormat;
 public class JSONSkinLoader extends SkinLoader {
 
 	protected Resolution dstr;
+	/**
+	 * スキン座標から描画先への拡大率(Skin.fitScale)。縦横比を保つ場合は縦横同じ
+	 */
+	protected float scaleX = 1, scaleY = 1;
 	protected boolean usecim;
 	protected int bgaExpand = -1;
 
@@ -283,6 +287,9 @@ public class JSONSkinLoader extends SkinLoader {
 			
 			header.setSourceResolution(src);
 			header.setDestinationResolution(dstr);
+			final float[] fit = Skin.fitScale(sk.w, sk.h, dstr.width, dstr.height, false);
+			scaleX = fit[0];
+			scaleY = fit[1];
 			skin = objectLoader.getSkin(header);
 			
 			IntIntMap op = new IntIntMap();

@@ -65,6 +65,10 @@ public class Config implements Validatable {
 	 */
 	private boolean autoResolution = false;
 	/**
+	 * beatorajaスキンを元の縦横比のまま描画する(余白は黒)。falseの場合は解像度に合わせて伸縮する
+	 */
+	private boolean keepSkinAspect = true;
+	/**
 	 * 起動時に自動で選んだ解像度。保存しない
 	 */
 	private transient Resolution autoResolved;
@@ -320,6 +324,14 @@ public class Config implements Validatable {
 
 	public Resolution getResolution() {
 		return autoResolved != null ? autoResolved : resolution;
+	}
+
+	public boolean isKeepSkinAspect() {
+		return keepSkinAspect;
+	}
+
+	public void setKeepSkinAspect(boolean keepSkinAspect) {
+		this.keepSkinAspect = keepSkinAspect;
 	}
 
 	public boolean isAutoResolution() {

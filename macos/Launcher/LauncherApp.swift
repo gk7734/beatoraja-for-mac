@@ -245,6 +245,8 @@ struct SettingsPage: View {
             Section("화면") {
                 choice("화면 모드", "s.displaymode", [("WINDOW","창 모드"),("FULLSCREEN","전체 화면"),("BORDERLESS","테두리 없는 창")])
                 toggle("시스템 해상도에 맞춤", "s.autoResolution")
+                toggle("스킨 비율 유지", "s.keepSkinAspect", default: true)
+                Text("해상도의 화면 비율이 스킨(대부분 16:9)과 다르면 늘리지 않고 가운데에 그린 뒤 남는 부분을 검게 둡니다. 끄면 예전처럼 화면에 맞춰 늘립니다.").font(.caption).foregroundStyle(.secondary)
                 if store.flag("s.autoResolution", default: false).wrappedValue {
                     Text("실행할 때 화면 크기에 맞는 해상도를 고릅니다. 전체 화면은 디스플레이 해상도, 창 모드는 메뉴 막대와 Dock을 뺀 영역에 들어가는 가장 큰 크기(화면 비율 우선)입니다. 1080p보다 작으면 Retina 밀도로 그려 선명하게 유지합니다.").font(.caption).foregroundStyle(.secondary)
                 } else {

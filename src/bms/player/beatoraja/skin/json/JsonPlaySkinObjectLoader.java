@@ -80,8 +80,8 @@ public class JsonPlaySkinObjectLoader extends JsonSkinObjectLoader<PlaySkin> {
 			float[] scale = new float[region.length];
 			int[] dstnote2 = new int[region.length];
 			Arrays.fill(dstnote2,  Integer.MIN_VALUE);
-			float dx = (float)loader.dstr.width / sk.w;
-			float dy = (float)loader.dstr.height / sk.h;
+			float dx = loader.scaleX;
+			float dy = loader.scaleY;
 			for (int i = 0; i < region.length; i++) {
 				JsonSkin.Animation dest = sk.note.dst[i];
 				region[i] = new Rectangle(dest.x * dx, dest.y * dy, dest.w * dx, dest.h * dy);
