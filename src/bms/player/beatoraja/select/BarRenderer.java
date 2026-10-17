@@ -174,6 +174,7 @@ public final class BarRenderer {
 				// songstatus最終値 =
 				// 0:通常 1:新規 2:SongBar(通常) 3:SongBar(新規) 4:FolderBar(通常) 5:FolderBar(新規) 6:TableBar or HashBar
 				// 7:GradeBar(曲所持) 8:(SongBar or GradeBar)(曲未所持) 9:CommandBar or ContainerBar 10:SearchWordBar
+				// 11:SongBar(LEGGENDARIA) 12:SongBar(LEGGENDARIA、新規)
 				// 3以降で定義されてなければ0か1を用いる
 				int songstatus = ba.value;
 				if(songstatus >= 2) {
@@ -186,6 +187,12 @@ public final class BarRenderer {
 						songstatus = song == null || System.currentTimeMillis() / 1000 > song.getAdddate() + 3600 * 24 ? 2 : 3;
 						//定義されてなければ0:通常か1:新規を用いる
 						if(baro.getText(songstatus) == null) songstatus = songstatus == 3 ? 1 : 0;
+						// LEGGENDARIA(難易度5)はIIDXと同じく専用のテキスト(ピンクの曲名)。スキンが定義している場合のみ
+						if (song != null && song.getDifficulty() == 5) {
+							int legg = (songstatus == 3 || songstatus == 1) ? SkinBar.BARTEXT_SONG_LEGGENDARIA_NEW : SkinBar.BARTEXT_SONG_LEGGENDARIA;
+							if (baro.getText(legg) == null) legg = SkinBar.BARTEXT_SONG_LEGGENDARIA;
+							if (baro.getText(legg) != null) songstatus = legg;
+						}
 					} else {
 						FolderData data = ((FolderBar) ba.sd).getFolderData();
 						songstatus = data == null || System.currentTimeMillis() / 1000 > data.getAdddate() + 3600 * 24 ? 4 : 5;

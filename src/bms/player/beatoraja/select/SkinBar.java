@@ -58,7 +58,11 @@ public final class SkinBar extends SkinObject {
     public static final int BARTEXT_NO_SONGS = 8;
     public static final int BARTEXT_COMMAND = 9;
     public static final int BARTEXT_SEARCH = 10;
-    public static final int BARTEXT_COUNT = 11;
+    /** 難易度5(LEGGENDARIA)の譜面のSongBar。未定義の場合はBARTEXT_SONG_NORMALを用いる */
+    public static final int BARTEXT_SONG_LEGGENDARIA = 11;
+    /** 難易度5(LEGGENDARIA)の譜面のSongBar(新規)。未定義の場合はBARTEXT_SONG_LEGGENDARIAを用いる */
+    public static final int BARTEXT_SONG_LEGGENDARIA_NEW = 12;
+    public static final int BARTEXT_COUNT = 13;
     /**
      * レベルのSkinNumber。描画位置はBarの相対座標
      */
