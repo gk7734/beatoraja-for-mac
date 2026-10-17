@@ -1,59 +1,47 @@
 # beatoraja for Mac
 
-[beatoraja](https://github.com/exch-bms2/beatoraja)를 기반으로 만든 비공식 Apple Silicon 전용 macOS 포크입니다.
+An unofficial Apple Silicon macOS port of [beatoraja](https://github.com/exch-bms2/beatoraja), with a native launcher.
 
-## Credits
+[한국어](#한국어) · [Download](https://github.com/gk7734/beatoraja-for-mac/releases/latest)
 
-**원작자: exch (exch-bms2) 및 beatoraja 기여자 여러분.**
-게임 엔진, BMS 기능과 기본 리소스의 원본 프로젝트는 [exch-bms2/beatoraja](https://github.com/exch-bms2/beatoraja)입니다.
-이 저장소의 macOS 포팅 및 Swift 런처 변경은 [gk7734](https://github.com/gk7734)가 관리합니다.
-자세한 표기는 [CREDITS.md](CREDITS.md)를 참고하세요. 원본 설명서는 [README.upstream.md](README.upstream.md)에 보존했습니다.
+## Install
 
-## 이 포크의 변경 사항
+1. Download `beatoraja-AppleSilicon.dmg` from [Releases](https://github.com/gk7734/beatoraja-for-mac/releases/latest).
+2. Open it and drag **beatoraja** into **Applications**.
+3. The app is not notarized by Apple: the first time, Control-click it and choose **Open**.
 
-- 한국어 SwiftUI 런처와 macOS 시스템 설정 형태의 UI
-- macOS 26 이상에서 네이티브 Liquid Glass 사용
-- Apple Silicon 전용 런타임 및 네이티브 라이브러리
-- 앱 내부에 Java 27과 JavaFX 포함
-- LWJGL 3 기반 게임 실행, 게임 종료 후 런처 복귀
-- 설정 검색, 플레이어 추가 및 휴지통으로 삭제
-- 난이도표 주소 추가 시 자동 다운로드, 전체 갱신 및 실패 결과 표시
-- 각 플레이 입력에 기본 키와 서브키 지정, 두 키의 누름 상태를 결합해 롱노트 유지
-- 이전 설치의 기본 스킨 글꼴 자동 복구
-- Litone12 목록 탐색 시 제한된 Lua 입력 API와 날짜·시간 함수 호환
+Add your BMS folders in the launcher's library and run a song scan. No songs are included.
+Settings and scores are stored in `~/Library/Application Support/beatoraja`.
 
-게임 렌더러는 OpenGL입니다. 런처와 게임은 별도 프로세스로 실행됩니다.
+## Features
 
-## 빌드
+- **Native launcher**: SwiftUI settings in the style of System Settings (Liquid Glass on macOS 26+), settings search, players, difficulty tables with automatic download
+- **Apple Silicon only**: Java 27 and JavaFX bundled, native libraries for arm64; the game runs as its own process and returns to the launcher
+- **Display**: resolution picked from your display, skins kept at their aspect ratio (no stretching on MacBook screens), Retina 1x rendering for less heat
+- **Input & audio**: HID keyboard input independent of frame rate, a primary and secondary key per lane, Apple Core Audio output
+- **Performance**: decoded skin images cached on disk (faster screen changes), bounded skin image memory
+- **Skins**: notes radar and IIDX-style player notes radar, skin settings preview, LEGGENDARIA title slots, Lua API extensions
 
-Apple Silicon Mac, Xcode Command Line Tools, JavaFX가 포함된 ARM64 JDK 27이 필요합니다.
+The game renders with OpenGL (LWJGL 3).
+
+## Keys
+
+In music select: **F12** (Fn+F12) opens skin settings, **9** the song's document, **8** songs in the same folder, **7** switches rivals.
+
+## Build
+
+Requires an Apple Silicon Mac, the Xcode Command Line Tools and an arm64 JDK 27 with JavaFX.
 
 ```sh
 BEATORAJA_JDK=/path/to/jdk/Contents/Home bash macos/build-app.sh
 ```
 
-완성된 앱, ZIP, 설치 DMG는 기본적으로 프로젝트 상위 폴더에 생성됩니다.
-`BEATORAJA_BUILD_DIR`, `BEATORAJA_OUTPUT_DIR`, `BEATORAJA_MACOS_SDK`로 경로를 지정할 수 있습니다.
-앱은 로컬 임시 서명을 사용하며 Apple 공증은 포함하지 않습니다. 실제 테스트 환경은 macOS 27 / Apple Silicon입니다.
+The app, a zip and the installer DMG are written to the parent folder of the project. Set `BEATORAJA_BUILD_DIR`,
+`BEATORAJA_OUTPUT_DIR` or `BEATORAJA_MACOS_SDK` to change the paths. The installer layout needs
+[uv](https://docs.astral.sh/uv/) (`dmgbuild`); without it a plain DMG is built. The app is ad-hoc signed.
 
-## 실행
-
-앱을 열고 라이브러리에서 BMS 곡 폴더를 추가한 뒤 곡 검색을 실행하세요. 곡 파일은 포함하지 않습니다.
-곡 선택 화면에서 **F12**(필요하면 **Fn+F12**)로 스킨 설정을 엽니다. 숫자 9는 곡 설명 문서, 8은 같은 폴더의 곡, 7은 라이벌 전환입니다.
-설정과 플레이 기록은 `~/Library/Application Support/beatoraja`에 저장됩니다.
-
-## Apple Core Audio 출력
-
-런처의 **오디오 → 오디오 출력 → Apple Core Audio**에서 선택합니다.
-Apple Audio Queue Services에 JNI로 직접 연결하며, macOS 기본 출력 장치를 사용합니다.
-`장치 기본값`은 시작 시 기본 출력 장치의 샘플 레이트를 조회합니다.
-기존 OpenAL/PortAudio 설정은 그대로 유지되므로 새 출력 방식을 직접 선택해야 합니다.
-
-PCM 믹싱은 기존 Java 믹서를 사용하고, 네이티브 콜백은 JVM에 진입하지 않고 버퍼를 반환합니다.
-버퍼는 3개이며 설정값은 버퍼당 프레임 수입니다. 실제 왕복 지연은 측정하지 않았습니다.
-출력 장치 변경 후에는 게임을 다시 시작하세요. 이 구현은 Audio Unit/HAL 저지연 전용 백엔드는 아닙니다.
-
-빌드 후 실제 기본 출력 장치에 무음만 보내는 테스트:
+<details>
+<summary>Core Audio smoke test (plays silence on the default output)</summary>
 
 ```sh
 JDK=/path/to/jdk/Contents/Home
@@ -61,7 +49,50 @@ JDK=/path/to/jdk/Contents/Home
 "$JDK/bin/java" --enable-native-access=ALL-UNNAMED -Djava.library.path=../.build/package-build/input/natives -cp '../.build/package-build/test-classes:../.build/package-build/classes:lib/*' CoreAudioSmokeTest
 ```
 
-## 라이선스
+</details>
 
-원본의 GNU GPL v3 라이선스와 저작자 표기를 유지합니다. [LICENSE](LICENSE)를 참고하세요.
-서드파티 라이브러리와 리소스의 권리는 각 저작자에게 있습니다.
+## Credits & license
+
+beatoraja is created by **exch (exch-bms2) and the beatoraja contributors**: [exch-bms2/beatoraja](https://github.com/exch-bms2/beatoraja).
+The macOS port and launcher are maintained by [gk7734](https://github.com/gk7734). See [CREDITS.md](CREDITS.md);
+the original readme is kept in [README.upstream.md](README.upstream.md).
+
+Licensed under the GNU GPL v3 like the original ([LICENSE](LICENSE)). Third-party libraries and resources belong to
+their respective authors.
+
+---
+
+## 한국어
+
+[beatoraja](https://github.com/exch-bms2/beatoraja)를 기반으로 만든 비공식 Apple Silicon 전용 macOS 포크입니다.
+
+### 설치
+
+1. [Releases](https://github.com/gk7734/beatoraja-for-mac/releases/latest)에서 `beatoraja-AppleSilicon.dmg`를 받습니다.
+2. 열어서 **beatoraja**를 **Applications** 폴더로 끌어다 놓습니다.
+3. Apple 공증이 없어서 처음 실행할 때는 앱을 Control-클릭한 뒤 **열기**를 선택합니다.
+
+런처의 라이브러리에서 BMS 곡 폴더를 추가하고 곡 검색을 실행하세요. 곡은 포함되어 있지 않습니다.
+설정과 플레이 기록은 `~/Library/Application Support/beatoraja`에 저장됩니다.
+
+### 주요 기능
+
+- **네이티브 런처**: 시스템 설정 형태의 SwiftUI 설정(macOS 26 이상 Liquid Glass), 설정 검색, 플레이어 관리, 난이도표 자동 다운로드
+- **Apple Silicon 전용**: Java 27과 JavaFX 내장, arm64 네이티브 라이브러리, 게임은 별도 프로세스로 실행되고 끝나면 런처로 복귀
+- **화면**: 디스플레이에 맞춘 해상도 자동 선택, 스킨 비율 유지(맥북 화면에서 늘어나지 않음), 발열을 줄이는 Retina 1x 렌더링
+- **입력·오디오**: 프레임과 무관한 HID 키보드 입력, 레인마다 기본 키와 서브 키, Apple Core Audio 출력
+- **성능**: 스킨 이미지 디스크 캐시(빠른 화면 전환), 스킨 이미지 메모리 상한
+- **스킨**: 노트레이더와 IIDX 방식 플레이어 노트레이더, 스킨 설정 미리보기, 레전다리아 제목 슬롯, Lua API 확장
+
+### 단축키
+
+곡 선택 화면에서 **F12**(Fn+F12)는 스킨 설정, **9**는 곡 설명 문서, **8**은 같은 폴더의 곡, **7**은 라이벌 전환입니다.
+
+### 빌드
+
+Apple Silicon Mac, Xcode Command Line Tools, JavaFX가 포함된 arm64 JDK 27이 필요합니다. 명령은 위 [Build](#build)와 같습니다.
+
+### 크레딧·라이선스
+
+원작자는 **exch (exch-bms2) 및 beatoraja 기여자 여러분**입니다. macOS 포팅과 런처는 [gk7734](https://github.com/gk7734)가 관리합니다.
+원본과 같은 GNU GPL v3 라이선스입니다.
