@@ -2,6 +2,7 @@ package bms.player.beatoraja;
 
 import java.util.Arrays;
 
+import bms.player.beatoraja.skin.Skin;
 import bms.player.beatoraja.skin.SkinProperty;
 
 /**
@@ -21,6 +22,11 @@ public class TimerManager {
 	private final long[] timer = new long[timerCount];
 
 	private MainState current;
+	/**
+	 * カスタムタイマーを参照するスキン。nullの場合は現在の状態のスキン。
+	 * SkinPreviewはスキン設定画面の状態で別のスキンを描画するため、その間はプレビュー中のスキンを指定する
+	 */
+	private Skin customTimerSkin;
 	
 	public long getStartTime() {
 		return starttime / 1000000;
@@ -60,7 +66,7 @@ public class TimerManager {
 		if (id >= 0 && id < timerCount) {
 			return timer[id];
 		} else {
-			return current.getSkin().getMicroCustomTimer(id);
+			return customTimerSkin().getMicroCustomTimer(id);
 		}
 	}
 
@@ -80,7 +86,7 @@ public class TimerManager {
 		if (id >= 0 && id < timerCount) {
 			timer[id] = microtime;
 		} else {
-			current.getSkin().setMicroCustomTimer(id, microtime);
+			customTimerSkin().setMicroCustomTimer(id, microtime);
 		}
 	}
 
@@ -92,6 +98,19 @@ public class TimerManager {
 		} else {
 			setMicroTimer(id, Long.MIN_VALUE);
 		}
+	}
+
+	private Skin customTimerSkin() {
+		return customTimerSkin != null ? customTimerSkin : current.getSkin();
+	}
+
+	/**
+	 * カスタムタイマーを参照するスキンを指定する
+	 *
+	 * @param skin スキン。nullの場合は現在の状態のスキン
+	 */
+	public void setCustomTimerSkin(Skin skin) {
+		this.customTimerSkin = skin;
 	}
 
 	public MainState getMainState() {

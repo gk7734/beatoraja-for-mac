@@ -85,10 +85,13 @@ public class SkinPreview extends SkinObject {
 		previewBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, width, height));
 		previewBatch.setTransformMatrix(new Matrix4());
 		previewBatch.begin();
+		// プレビュー中のスキンのカスタムタイマーは状態(スキン設定画面)のスキンではなくプレビュー中のスキンで参照する
+		configuration.timer.setCustomTimerSkin(previewSkin);
 		try {
 			previewSkin.updateCustomObjects(configuration);
 			previewSkin.drawAllObjectsSafely(previewBatch, configuration);
 		} finally {
+			configuration.timer.setCustomTimerSkin(null);
 			previewBatch.end();
 			frameBuffer.end();
 			// end() always returns to the backbuffer; go back to the scaled render target instead.
