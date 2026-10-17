@@ -161,6 +161,19 @@ public class MainLoader extends Application {
 			System.exit(1);
 		}
 
+		boolean hiDpiRendering = config.isHiDpiRendering();
+		if (config.isAutoResolution()) {
+			try {
+				final AutoResolution.Result picked = AutoResolution.choose(config.getDisplaymode());
+				if (picked != null) {
+					config.setAutoResolvedResolution(picked.resolution());
+					hiDpiRendering |= picked.hiDpi();
+				}
+			} catch (Throwable e) {
+				Logger.getGlobal().warning("自動解像度の取得に失敗 : " + e.getMessage());
+			}
+		}
+
 		try {
 			final MainController main = new MainController(f, config, player, auto, songUpdated, songdb);
 
@@ -177,7 +190,7 @@ public class MainLoader extends Application {
             // FrameLimiter below replaces Lwjgl3's yield-spinning Sync.
             cfg.setForegroundFPS(0);
             final FrameLimiter limiter = new FrameLimiter();
-            final RenderScaler scaler = new RenderScaler(config.isHiDpiRendering());
+            final RenderScaler scaler = new RenderScaler(hiDpiRendering);
             final int maxFps = config.getMaxFramePerSecond();
             final AtomicBoolean focused = new AtomicBoolean(true);
             cfg.setWindowListener(new Lwjgl3WindowAdapter() {

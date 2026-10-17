@@ -60,6 +60,14 @@ public class Config implements Validatable {
 	 * 解像度
 	 */
 	private Resolution resolution = HD;
+	/**
+	 * システムの画面サイズから解像度を選ぶ(AutoResolution)。resolutionは保存されたまま使われない
+	 */
+	private boolean autoResolution = false;
+	/**
+	 * 起動時に自動で選んだ解像度。保存しない
+	 */
+	private transient Resolution autoResolved;
 
 	private boolean useResolution = true;
 	private int windowWidth = 1280;
@@ -311,7 +319,22 @@ public class Config implements Validatable {
 	}
 
 	public Resolution getResolution() {
-		return resolution;
+		return autoResolved != null ? autoResolved : resolution;
+	}
+
+	public boolean isAutoResolution() {
+		return autoResolution;
+	}
+
+	public void setAutoResolution(boolean autoResolution) {
+		this.autoResolution = autoResolution;
+	}
+
+	/**
+	 * 自動で選んだ解像度を設定する。getResolution()はこの値を返し、resolutionは変更しない
+	 */
+	void setAutoResolvedResolution(Resolution resolution) {
+		this.autoResolved = resolution;
 	}
 
 	public void setResolution(Resolution resolution) {
