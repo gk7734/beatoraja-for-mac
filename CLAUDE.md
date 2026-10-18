@@ -22,6 +22,7 @@ What the script does, in order (useful when only one part needs rebuilding):
 3. Compiles `macos/audio/CoreAudio.c` and `macos/metal/MetalRenderer.m` into `natives/libbeatoraja_coreaudio.dylib` and `natives/libbeatoraja_metal.dylib`, builds `beatoraja.jar` (Main-Class `MacBootstrap`, Class-Path = every jar in `lib/`), jlinks a runtime (cached in the build dir — delete `runtime/` there to force a rebuild), and runs `jpackage`.
 4. Runs `MacMaintenance --defaults` to generate `Contents/app/defaults/config_sys.json` and `config_player.json`.
 5. Compiles `macos/Launcher/*.swift` with `swiftc` and **replaces the jpackage executable** `Contents/MacOS/beatoraja` with the Swift launcher. Prefers the MacOSX26.5 SDK if present because the macOS 27 beta CLT lacks SwiftUIMacros.
+6. Signs the app with `BEATORAJA_SIGN_IDENTITY`, else the self-signed "beatoraja Local Signing" identity if it is in the login keychain, else ad-hoc. Ad-hoc signatures change every build, which silently drops the Input Monitoring grant that HID keyboard input needs.
 
 Quick Java-only compile check (no packaging):
 

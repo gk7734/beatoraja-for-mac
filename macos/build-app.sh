@@ -55,7 +55,11 @@ xcrun swiftc -sdk "$SDK" -parse-as-library -O -target arm64-apple-macos14.0 -mod
 /usr/libexec/PlistBuddy -c 'Add :CFBundleLocalizations array' "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Add :CFBundleLocalizations:0 string ko' "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :LSMinimumSystemVersion 14.0' "$APP/Contents/Info.plist"
-codesign --force --deep --sign - "$APP"
+# A fixed signing identity keeps macOS privacy grants (Input Monitoring for HID keyboard input) across rebuilds;
+# an ad-hoc signature changes with every build, so macOS sees a new app each time. BEATORAJA_SIGN_IDENTITY wins
+# ("-" forces ad-hoc), then the self-signed "beatoraja Local Signing" identity if the keychain has it, else ad-hoc.
+SIGN="${BEATORAJA_SIGN_IDENTITY:-$(security find-identity -p codesigning 2>/dev/null | awk '/"beatoraja Local Signing"/ {print $2; exit}')}"
+codesign --force --deep --sign "${SIGN:--}" "$APP"
 codesign --verify --deep --strict "$APP"
 mkdir -p "$DEST"
 python3 - "$APP" "$DEST" "$BUILD" <<'COPY'
