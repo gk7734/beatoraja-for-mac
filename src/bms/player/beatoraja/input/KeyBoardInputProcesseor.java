@@ -1,6 +1,7 @@
 package bms.player.beatoraja.input;
 
 import java.util.Arrays;
+import java.util.concurrent.ArrayBlockingQueue;
 
 import bms.player.beatoraja.PlayModeConfig.KeyboardConfig;
 import bms.player.beatoraja.Resolution;
@@ -72,6 +73,15 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	 * the other key as it was at that moment rather than its latest state.
 	 */
 	private final boolean[] hidReplayState = new boolean[256];
+	/**
+	 * GLFW key events in arrival order. GLFW's key state only changes once per frame, so releasing and pressing
+	 * a key again within one frame (back-to-back scratch long notes) left the state unchanged and the second
+	 * press was lost. The events keep both edges.
+	 */
+	private final ArrayBlockingQueue<MacHidKeyboard.Event> glfwEvents = new ArrayBlockingQueue<>(1024);
+	/** GLFW key state as of the event currently being replayed (see hidReplayState) */
+	private final boolean[] glfwReplayState = new boolean[256];
+	private final boolean[] glfwReplayKnown = new boolean[256];
 
 	public KeyBoardInputProcesseor(BMSPlayerInputProcessor bmsPlayerInputProcessor, KeyboardConfig config, Resolution resolution) {
 		super(bmsPlayerInputProcessor, Type.KEYBOARD);
@@ -96,6 +106,7 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 
 	public boolean keyDown(int keycode) {
 		setLastPressedKey(keycode);
+		queueGlfwEvent(keycode, true);
 		return true;
 	}
 
@@ -104,7 +115,15 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	}
 
 	public boolean keyUp(int keycode) {
+		queueGlfwEvent(keycode, false);
 		return true;
+	}
+
+	/** Render thread (libGDX event processing); poll() consumes the queue on the input thread. */
+	private void queueGlfwEvent(int keycode, boolean pressed) {
+		if (keycode >= 0 && keycode < 256) {
+			glfwEvents.offer(new MacHidKeyboard.Event(keycode, pressed, Gdx.input.getCurrentEventTime()));
+		}
 	}
 
 	public void clear() {
@@ -121,9 +140,9 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 
 	public void poll(final long microtime) {
 		final MacHidKeyboard hid = this.hid;
+		final long starttime = bmsPlayerInputProcessor.getStartTime();
 		if (hid != null) {
 			// Apply HID key changes in order with their own timestamps, so taps shorter than the poll interval are kept.
-			final long starttime = bmsPlayerInputProcessor.getStartTime();
 			for (MacHidKeyboard.Event event; (event = hid.poll()) != null;) {
 				if (textmode || !hidVerified[event.keycode()]) {
 					continue;
@@ -134,6 +153,22 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 					if (keys[i] == event.keycode() || secondaryKeys[i] == event.keycode()) {
 						updateLane(i, time, this::isReplayKeyDown);
 					}
+				}
+			}
+		}
+		// Then GLFW key events for keys HID does not report. Both edges of a release and re-press within one frame
+		// arrive with the same time; the duration filter holds the press until the release has been judged.
+		for (MacHidKeyboard.Event event; (event = glfwEvents.poll()) != null;) {
+			final int key = event.keycode();
+			if (textmode || (hid != null && hidVerified[key])) {
+				continue;
+			}
+			glfwReplayState[key] = event.pressed();
+			glfwReplayKnown[key] = true;
+			final long time = Math.min(microtime, event.nanos() / 1000 - starttime);
+			for (int i = 0; i < keys.length; i++) {
+				if (keys[i] == key || secondaryKeys[i] == key) {
+					updateLane(i, time, this::isReplayKeyDown);
 				}
 			}
 		}
@@ -171,8 +206,14 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		mouseScratchInput.poll(microtime);
 	}
 
+	/**
+	 * The judge reads only each lane's latest state, so a lane's next change waits at least this long even with an
+	 * input duration of 0; otherwise a release and re-press applied in one poll would hide the release.
+	 */
+	private static final long MIN_CHANGE_INTERVAL = 2000;
+
 	private void updateLane(int i, long time, java.util.function.IntPredicate pressed) {
-		if (laneBindings.update(i, time, duration * 1000L, pressed)) {
+		if (laneBindings.update(i, time, Math.max(duration * 1000L, MIN_CHANGE_INTERVAL), pressed)) {
 			this.bmsPlayerInputProcessor.keyChanged(this, time, i, laneBindings.isDown(i));
 			this.bmsPlayerInputProcessor.setAnalogState(i, false, 0);
 		}
@@ -190,7 +231,10 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	}
 
 	private boolean isReplayKeyDown(int key) {
-		return hidVerified[key] ? hidReplayState[key] && MacHidKeyboard.isFocused() : Gdx.input.isKeyPressed(key);
+		if (hidVerified[key]) {
+			return hidReplayState[key] && MacHidKeyboard.isFocused();
+		}
+		return glfwReplayKnown[key] ? glfwReplayState[key] : Gdx.input.isKeyPressed(key);
 	}
 
 	private int currentlyHeldModifiers() {
