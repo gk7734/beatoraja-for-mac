@@ -14,6 +14,7 @@ struct SettingSearchItem: Identifiable {
         if title.contains("Retina") { text += " 레티나 hidpi 발열 해상도 배율" }
         if title.contains("Metal") { text += " 메탈 opengl gpu 그래픽 렌더러 렌더링 메모리 렉" }
         if title.contains("직접 입력") { text += " hid 입력 모니터링 판정 지연" }
+        if title.contains("번갈아") { text += " bss 백스핀 차지노트 cn 턴테이블 scratch" }
         if title.contains("배경 영상") { text += " bga 동영상" }
         if title.contains("타이밍") { text += " 지연 latency" }
         if title.contains("폴더") { text += " 경로 디렉터리" }
@@ -64,6 +65,7 @@ struct SettingSearchItem: Identifiable {
         .init(page: .select, title: "스크롤 대기 시간(ms)"),
         .init(page: .select, title: "빠른 스크롤 간격(ms)"),
         .init(page: .input, title: "입력 간격(ms)"),
+        .init(page: .input, title: "스크래치 키 번갈아 입력"),
         .init(page: .input, title: "키보드 직접 입력"),
         .init(page: .input, title: "플레이 입력 기본 키 · 서브키"),
         .init(page: .input, title: "마우스 스크래치 사용"),

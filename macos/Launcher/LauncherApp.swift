@@ -322,6 +322,8 @@ struct SettingsPage: View {
             Section("키보드") {
                 KeyBindings(mode: mode)
                 number("입력 간격(ms)", "p.\(mode).keyboard.duration", 0...100)
+                toggle("스크래치 키 번갈아 입력", "p.\(mode).keyboard.alternateScratch")
+                Text("플레이 중 스크래치 키를 누를 때마다 위·아래 방향으로 번갈아 들어갑니다. 키 하나로 BSS(스크래치 차지노트)를 끝낼 수 있습니다: 누름(시작) → 톡(끝) → 누름(다음 시작).").font(.caption).foregroundStyle(.secondary)
                 // Matches Config.directKeyboardInput's Java default for configs written before the field existed.
                 toggle("키보드 직접 입력", "s.directKeyboardInput", default: true)
                 Text("프레임 수와 관계없이 키 입력 시점을 정확하게 기록합니다. 처음 실행할 때 입력 모니터링 권한을 요청하며, 허용한 뒤 다음 실행부터 적용됩니다.").font(.caption).foregroundStyle(.secondary)

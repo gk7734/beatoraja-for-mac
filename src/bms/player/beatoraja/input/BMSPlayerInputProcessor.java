@@ -126,6 +126,11 @@ public class BMSPlayerInputProcessor {
 
 	private Type type = Type.KEYBOARD;
 
+	/** Turntable key pairs for KeyboardConfig.alternateScratch while playing; setPlayConfig/setKeyboardConfig clear them. */
+	public void setScratchPairs(int[][] pairs) {
+		kbinput.setScratchPairs(pairs);
+	}
+
 	public void setKeyboardConfig(KeyboardConfig config) {
 		kbinput.setConfig(config);
 	}

@@ -274,6 +274,11 @@ public final class PlayModeConfig {
         private int select;
 
         private int duration = 16;
+        /**
+         * During play, each new press of a scratch key goes alternately to the turntable's two directions, so one key
+         * can end a back spin scratch (charge note on the turntable), which needs the opposite direction
+         */
+        private boolean alternateScratch = false;
 
         public KeyboardConfig() {
             this(Mode.BEAT_14K, true);
@@ -345,6 +350,14 @@ public final class PlayModeConfig {
 
         public void setDuration(int inputduration) {
             this.duration = inputduration;
+        }
+
+        public boolean isAlternateScratch() {
+            return alternateScratch;
+        }
+
+        public void setAlternateScratch(boolean alternateScratch) {
+            this.alternateScratch = alternateScratch;
         }
     }
 

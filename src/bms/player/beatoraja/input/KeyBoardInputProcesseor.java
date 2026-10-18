@@ -82,6 +82,14 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 	/** GLFW key state as of the event currently being replayed (see hidReplayState) */
 	private final boolean[] glfwReplayState = new boolean[256];
 	private final boolean[] glfwReplayKnown = new boolean[256];
+	/** KeyboardConfig.alternateScratch */
+	private boolean alternateScratch;
+	/** Key indices of each turntable's two directions while playing (LaneProperty.getScratchKeyAssign), else empty */
+	private int[][] scratchPairs = new int[0][];
+	/** Per turntable: which of its two indices the next press goes to */
+	private int[] nextScratch = new int[0];
+	/** Per key index: the index its current press was sent to, -1 when up */
+	private final int[] sentTo = new int[256];
 
 	public KeyBoardInputProcesseor(BMSPlayerInputProcessor bmsPlayerInputProcessor, KeyboardConfig config, Resolution resolution) {
 		super(bmsPlayerInputProcessor, Type.KEYBOARD);
@@ -100,6 +108,8 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
         this.laneBindings = new KeyboardLaneBindings(keys, config.getSecondaryKeyAssign());
 		this.secondaryKeys = KeyboardLaneBindings.normalize(config.getSecondaryKeyAssign(), keys.length);
 		this.duration = config.getDuration();
+		this.alternateScratch = config.isAlternateScratch();
+		setScratchPairs(new int[0][]);
 		this.control = new int[] { config.getStart(), config.getSelect() };
 		mouseScratchInput.setConfig(config);
 	}
@@ -131,7 +141,19 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 		Arrays.fill(keytime, Long.MIN_VALUE);
 		lastPressedKey = -1;
         laneBindings.clear();
+		Arrays.fill(sentTo, -1);
+		Arrays.fill(nextScratch, 0);
 		mouseScratchInput.clear();
+	}
+
+	/**
+	 * Turntables whose presses alternate between their two directions (only while playing; menus use the
+	 * directions to move). Cleared by setConfig.
+	 */
+	void setScratchPairs(int[][] pairs) {
+		scratchPairs = pairs;
+		nextScratch = new int[pairs.length];
+		Arrays.fill(sentTo, -1);
 	}
 
 	void setHidKeyboard(MacHidKeyboard hid) {
@@ -214,9 +236,32 @@ public class KeyBoardInputProcesseor extends BMSPlayerInputDevice implements Inp
 
 	private void updateLane(int i, long time, java.util.function.IntPredicate pressed) {
 		if (laneBindings.update(i, time, Math.max(duration * 1000L, MIN_CHANGE_INTERVAL), pressed)) {
-			this.bmsPlayerInputProcessor.keyChanged(this, time, i, laneBindings.isDown(i));
-			this.bmsPlayerInputProcessor.setAnalogState(i, false, 0);
+			final boolean down = laneBindings.isDown(i);
+			final int index = scratchTarget(i, down);
+			this.bmsPlayerInputProcessor.keyChanged(this, time, index, down);
+			this.bmsPlayerInputProcessor.setAnalogState(index, false, 0);
 		}
+	}
+
+	/** The key index a change of lane i is reported as: alternating turntable directions, else i itself. */
+	private int scratchTarget(int i, boolean down) {
+		if (!alternateScratch || i >= sentTo.length) {
+			return i;
+		}
+		for (int p = 0; p < scratchPairs.length; p++) {
+			final int[] pair = scratchPairs[p];
+			if (pair.length == 2 && (pair[0] == i || pair[1] == i)) {
+				if (down) {
+					sentTo[i] = pair[nextScratch[p]];
+					nextScratch[p] ^= 1;
+					return sentTo[i];
+				}
+				final int index = sentTo[i] >= 0 ? sentTo[i] : i;
+				sentTo[i] = -1;
+				return index;
+			}
+		}
+		return i;
 	}
 
 	private void verifyHidKey(MacHidKeyboard hid, int key) {

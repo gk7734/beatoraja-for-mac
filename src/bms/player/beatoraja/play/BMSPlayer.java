@@ -412,6 +412,7 @@ public class BMSPlayer extends MainState {
 		final BMSPlayerInputProcessor input = main.getInputProcessor();
 		if(autoplay.mode == BMSPlayerMode.Mode.PLAY || autoplay.mode == BMSPlayerMode.Mode.PRACTICE) {
 			input.setPlayConfig(config.getPlayConfig(model.getMode()));
+			input.setScratchPairs(laneProperty.getScratchKeyAssign());
 		} else if (autoplay.mode == BMSPlayerMode.Mode.AUTOPLAY || autoplay.mode == BMSPlayerMode.Mode.REPLAY) {
 			input.setEnable(false);
 		}
