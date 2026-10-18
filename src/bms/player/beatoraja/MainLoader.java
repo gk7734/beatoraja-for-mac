@@ -35,6 +35,7 @@ import javafx.scene.layout.VBox;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter;
 
 import bms.player.beatoraja.AudioConfig.DriverType;
@@ -250,6 +251,7 @@ public class MainLoader extends Application {
 				}
 				
 				public void create() {
+					MacWindowColorSpace.applySrgb(((Lwjgl3Graphics) Gdx.graphics).getWindow().getWindowHandle());
 					main.create();
 					watchdog = new FrameHitchWatchdog(Thread.currentThread());
 					watchdog.start();
