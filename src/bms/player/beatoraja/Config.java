@@ -57,6 +57,10 @@ public class Config implements Validatable {
 	 */
 	private boolean hiDpiRendering = false;
 	/**
+	 * macOS: draw with Metal instead of OpenGL (bms.player.beatoraja.metal)
+	 */
+	private boolean metalRenderer = true;
+	/**
 	 * 解像度
 	 */
 	private Resolution resolution = HD;
@@ -256,6 +260,14 @@ public class Config implements Validatable {
 
 	public void setHiDpiRendering(boolean hiDpiRendering) {
 		this.hiDpiRendering = hiDpiRendering;
+	}
+
+	public boolean isMetalRenderer() {
+		return metalRenderer;
+	}
+
+	public void setMetalRenderer(boolean metalRenderer) {
+		this.metalRenderer = metalRenderer;
 	}
 
 	public boolean isDirectKeyboardInput() {

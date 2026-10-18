@@ -28,6 +28,7 @@ import bms.player.beatoraja.external.*;
 import bms.player.beatoraja.input.BMSPlayerInputProcessor;
 import bms.player.beatoraja.input.KeyCommand;
 import bms.player.beatoraja.ir.*;
+import bms.player.beatoraja.metal.MetalRenderer;
 import bms.player.beatoraja.play.BMSPlayer;
 import bms.player.beatoraja.play.TargetProperty;
 import bms.player.beatoraja.result.CourseResult;
@@ -293,7 +294,7 @@ public final class MainController {
 
 	public void create() {
 		final long t = System.currentTimeMillis();
-		sprite = new SpriteBatch();
+		sprite = MetalRenderer.newSpriteBatch();
 		SkinLoader.initPixmapResourcePool(config.getSkinPixmapGen());
 		SkinLoader.getResource().setMaxBytes(config.getSkinPixmapCacheMB() * 1024L * 1024L);
 		if (config.getSkinImageDiskCacheMB() > 0) {

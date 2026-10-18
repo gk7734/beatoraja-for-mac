@@ -3,6 +3,7 @@ package bms.player.beatoraja.config;
 import java.util.logging.Logger;
 
 import bms.player.beatoraja.MainState;
+import bms.player.beatoraja.metal.MetalRenderer;
 import bms.player.beatoraja.skin.Skin;
 import bms.player.beatoraja.skin.Skin.SkinObjectRenderer;
 import bms.player.beatoraja.skin.SkinObject;
@@ -103,7 +104,7 @@ public class SkinPreview extends SkinObject {
 
 	private void ensureFrameBuffer(int width, int height) {
 		if (previewBatch == null) {
-			previewBatch = new SpriteBatch();
+			previewBatch = MetalRenderer.newSpriteBatch();
 		}
 		if (frameBuffer != null && bufferWidth == width && bufferHeight == height) {
 			return;

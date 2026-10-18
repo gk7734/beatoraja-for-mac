@@ -106,6 +106,11 @@ public class PixmapResourcePool extends ResourcePool<String, PixmapResourcePool.
 		this.diskCache = diskCache;
 	}
 
+	/** @return null if images are not cached on disk */
+	public DecodedImageCache getDiskCache() {
+		return diskCache;
+	}
+
 	@Override
 	protected PixmapResource load(String path) {
 		SongResource songResource = songResources.get(path);

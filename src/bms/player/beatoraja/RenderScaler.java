@@ -9,6 +9,8 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.HdpiMode;
 import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 
+import bms.player.beatoraja.metal.MetalRenderer;
+
 /**
  * Renders frames at 1 pixel per point on Retina displays and upscales once to the backbuffer.
  * GLFW 3.4 on macOS ignores GLFW_SCALE_FRAMEBUFFER, so the backbuffer is always 2x; drawing every
@@ -27,17 +29,18 @@ public final class RenderScaler {
 
 	/** Width of the framebuffer currently being rendered to; use instead of the backbuffer size inside render(). */
 	public static int getTargetWidth() {
-		return target != null ? target.getWidth() : Gdx.graphics.getBackBufferWidth();
+		return MetalRenderer.isActive() ? MetalRenderer.getWidth() : target != null ? target.getWidth() : Gdx.graphics.getBackBufferWidth();
 	}
 
 	public static int getTargetHeight() {
-		return target != null ? target.getHeight() : Gdx.graphics.getBackBufferHeight();
+		return MetalRenderer.isActive() ? MetalRenderer.getHeight() : target != null ? target.getHeight() : Gdx.graphics.getBackBufferHeight();
 	}
 
 	void begin() {
 		final int width = Gdx.graphics.getWidth();
 		final int height = Gdx.graphics.getHeight();
-		if (!enabled || width <= 0 || height <= 0 || Gdx.graphics.getBackBufferWidth() <= width) {
+		// Metal draws at 1x itself and lets Core Animation upscale (MetalRenderer.beginFrame).
+		if (!enabled || MetalRenderer.isActive() || width <= 0 || height <= 0 || Gdx.graphics.getBackBufferWidth() <= width) {
 			disposeTarget();
 			return;
 		}
@@ -75,7 +78,10 @@ public final class RenderScaler {
 
 	/** Restores the render target after a nested FrameBuffer, which always unbinds to the backbuffer. */
 	public static void restoreTarget() {
-		if (target != null) {
+		if (MetalRenderer.isActive()) {
+			Gdx.gl.glBindFramebuffer(GL20.GL_FRAMEBUFFER, 0);
+			Gdx.gl.glViewport(0, 0, MetalRenderer.getWidth(), MetalRenderer.getHeight());
+		} else if (target != null) {
 			target.bind();
 			Gdx.gl.glViewport(0, 0, target.getWidth(), target.getHeight());
 		} else {

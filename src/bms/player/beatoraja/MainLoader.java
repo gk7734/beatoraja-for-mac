@@ -43,6 +43,7 @@ import bms.player.beatoraja.ir.IRConnectionManager;
 import bms.player.beatoraja.ir.IRResponse;
 import bms.player.beatoraja.ir.IRVersionInfo;
 import bms.player.beatoraja.launcher.PlayConfigurationView;
+import bms.player.beatoraja.metal.MetalRenderer;
 import bms.player.beatoraja.song.SQLiteSongDatabaseAccessor;
 import bms.player.beatoraja.song.SongData;
 import bms.player.beatoraja.song.SongDatabaseAccessor;
@@ -185,7 +186,11 @@ public class MainLoader extends Application {
                 case BORDERLESS -> cfg.setDecorated(false);
                 default -> cfg.setDecorated(true);
             }
-            cfg.useVsync(config.isVsync());
+            // Metal presents on its own layer; GL's swap stays unsynchronised so it never holds a frame back.
+            final boolean metal = config.isMetalRenderer();
+            final boolean vsync = config.isVsync();
+            final boolean lowResolution = !hiDpiRendering;
+            cfg.useVsync(vsync && !metal);
             // Only polls events while minimized. Lwjgl3 divides 1000 by this, so it must never be 0 (unlimited FPS).
             cfg.setIdleFPS(30);
             // FrameLimiter below replaces Lwjgl3's yield-spinning Sync.
@@ -233,9 +238,11 @@ public class MainLoader extends Application {
 					// Unfocused windows receive no key input; 60 FPS keeps stream captures smooth.
 					limiter.sync(focused.get() ? maxFps : (maxFps <= 0 ? 60 : Math.min(maxFps, 60)));
 					scaler.begin();
+					MetalRenderer.beginFrame();
 					try {
 						main.render();
 					} finally {
+						MetalRenderer.endFrame();
 						scaler.end();
 					}
 				}
@@ -250,6 +257,9 @@ public class MainLoader extends Application {
 				}
 				
 				public void create() {
+					if (metal && !MetalRenderer.init(vsync, lowResolution)) {
+						Gdx.graphics.setVSync(vsync);
+					}
 					main.create();
 					watchdog = new FrameHitchWatchdog(Thread.currentThread());
 					watchdog.start();

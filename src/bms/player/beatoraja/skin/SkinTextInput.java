@@ -1,6 +1,7 @@
 package bms.player.beatoraja.skin;
 
 import bms.player.beatoraja.MainState;
+import bms.player.beatoraja.metal.MetalRenderer;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
@@ -112,7 +113,8 @@ class SkinTextInput {
 		Stage stage = state.getStage();
 		if (stage == null) {
 			var resolution = state.main.getConfig().getResolution();
-			stage = new Stage(new FitViewport(resolution.width, resolution.height));
+			final FitViewport viewport = new FitViewport(resolution.width, resolution.height);
+			stage = MetalRenderer.isActive() ? new Stage(viewport, MetalRenderer.newSpriteBatch()) : new Stage(viewport);
 			state.setStage(stage);
 		}
 		Gdx.input.setInputProcessor(new InputMultiplexer(stage, state.main.getInputProcessor().getKeyBoardInputProcesseor()));

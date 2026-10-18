@@ -9,12 +9,12 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 
 import bms.model.Mode;
@@ -75,7 +75,8 @@ public class KeyConfiguration extends MainState {
 
 	private int mode = 0;
 
-	private ShapeRenderer shape;
+	/** 1x1 white for the cursor boxes; drawn with the SpriteBatch so it works with both GL and Metal */
+	private Texture white;
 
 	private BMSPlayerInputProcessor input;
 	private KeyBoardInputProcesseor keyboard;
@@ -115,7 +116,11 @@ public class KeyConfiguration extends MainState {
 			Logger.getGlobal().severe("Font読み込み失敗");
 		}
 
-		shape = new ShapeRenderer();
+		final Pixmap pixel = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+		pixel.setColor(Color.WHITE);
+		pixel.fill();
+		white = new Texture(pixel);
+		pixel.dispose();
 
 		input = main.getInputProcessor();
 		keyboard = input.getKeyBoardInputProcesseor();
@@ -286,12 +291,13 @@ public class KeyConfiguration extends MainState {
 		for (int i = scrollpos; i < keys.length; i++) {
 			int y = 576 - (i - scrollpos) * 24;
 			if (i == cursorpos) {
-				shape.begin(ShapeType.Filled);
-				shape.setColor(keyinput ? Color.RED : Color.BLUE);
-				shape.rect(200 * scaleX, y * scaleY, 80 * scaleX, 24 * scaleY);
-				shape.rect(350 * scaleX, y * scaleY, 80 * scaleX, 24 * scaleY);
-				shape.rect(650 * scaleX, y * scaleY, 80 * scaleX, 24 * scaleY);
-				shape.end();
+				sprite.begin();
+				sprite.setColor(keyinput ? Color.RED : Color.BLUE);
+				sprite.draw(white, 200 * scaleX, y * scaleY, 80 * scaleX, 24 * scaleY);
+				sprite.draw(white, 350 * scaleX, y * scaleY, 80 * scaleX, 24 * scaleY);
+				sprite.draw(white, 650 * scaleX, y * scaleY, 80 * scaleX, 24 * scaleY);
+				sprite.setColor(Color.WHITE);
+				sprite.end();
 			}
 			sprite.begin();
 			if(titlefont != null) {
@@ -596,9 +602,9 @@ public class KeyConfiguration extends MainState {
 			titlefont.dispose();
 			titlefont = null;
 		}
-		if (shape != null) {
-			shape.dispose();
-			shape = null;
+		if (white != null) {
+			white.dispose();
+			white = null;
 		}
 	}
 }

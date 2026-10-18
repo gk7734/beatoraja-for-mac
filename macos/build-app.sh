@@ -36,6 +36,8 @@ PY
 xcrun clang -arch arm64 -mmacosx-version-min=14.0 -O2 -Wall -Wextra -Wno-unused-parameter -dynamiclib \
  -I"$JDK/include" -I"$JDK/include/darwin" "$PROJECT/macos/audio/CoreAudio.c" \
  -framework AudioToolbox -framework CoreAudio -framework CoreFoundation -o "$BUILD/input/natives/libbeatoraja_coreaudio.dylib"
+xcrun clang -arch arm64 -mmacosx-version-min=14.0 -O2 -Wall -Wextra -Wno-unused-parameter -fobjc-arc -dynamiclib "$PROJECT/macos/metal/MetalRenderer.m" \
+ -framework Metal -framework QuartzCore -framework Cocoa -o "$BUILD/input/natives/libbeatoraja_metal.dylib"
 "$JDK/bin/jar" --create --file "$BUILD/input/beatoraja.jar" --manifest "$BUILD/MANIFEST.MF" -C "$BUILD/classes" .
 if [ ! -d "$BUILD/runtime" ]; then
  "$JDK/bin/jlink" --add-modules java.se,jdk.unsupported,jdk.jfr,jdk.charsets,javafx.controls,javafx.fxml,javafx.swing --strip-debug --no-header-files --no-man-pages --output "$BUILD/runtime"

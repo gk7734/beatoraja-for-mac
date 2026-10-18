@@ -258,6 +258,8 @@ struct SettingsPage: View {
                 Text("수직 동기화를 끄고 0(제한 없음)으로 두면 모니터 주사율보다 훨씬 많이 그려 발열이 크게 늘어납니다. 키보드 직접 입력을 쓰면 수직 동기화를 켜도 키보드 판정은 손해가 없습니다.").font(.caption).foregroundStyle(.secondary)
                 toggle("Retina 고해상도 렌더링", "s.hiDpiRendering")
                 Text("끄면 화면을 1배 밀도로 그린 뒤 확대합니다. GPU 부하와 발열이 크게 줄고, 대부분의 스킨에서는 차이가 거의 보이지 않습니다.").font(.caption).foregroundStyle(.secondary)
+                toggle("Metal로 그리기", "s.metalRenderer", default: true)
+                Text("OpenGL 대신 Apple의 Metal로 직접 그립니다. 화면이 바뀔 때 멈추는 시간과 메모리 사용이 줄어듭니다. 화면이 이상하게 나오면 끄고 OpenGL로 그릴 수 있습니다.").font(.caption).foregroundStyle(.secondary)
             }
             Section("배경 영상") {
                 choice("재생", "s.bga", [("0","항상"),("1","자동 플레이만"),("2","사용 안 함")], numeric: true)

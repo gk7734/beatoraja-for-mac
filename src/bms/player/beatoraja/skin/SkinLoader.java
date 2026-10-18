@@ -1,6 +1,7 @@
 package bms.player.beatoraja.skin;
 
 import bms.player.beatoraja.*;
+import bms.player.beatoraja.metal.MetalTextureLoader;
 import bms.player.beatoraja.skin.json.JSONSkinLoader;
 import bms.player.beatoraja.skin.lr2.LR2SkinCSVLoader;
 import bms.player.beatoraja.skin.lr2.LR2SkinHeaderLoader;
@@ -146,6 +147,11 @@ public abstract class SkinLoader {
 
     public static Texture getTexture(String path, boolean usecim, boolean useMipMaps) {
     	final PixmapResourcePool resource = SkinLoader.getResource();
+        // Metal: large images load on a background thread and appear when ready
+        final Texture background = MetalTextureLoader.load(path, useMipMaps, resource);
+        if (background != null) {
+            return background;
+        }
         if(resource.exists(path)) {
             return new Texture(resource.getPixmap(path), useMipMaps);
         }
