@@ -42,6 +42,10 @@ public final class SkinHitErrorVisualizer extends SkinObject {
 	private final boolean hiterrorMode;
 	private final boolean colorMode;
 	private final boolean drawDecay;
+	/**
+	 * Fill the judge windows of the current chart behind the lines (PG..BD colours, early on the left)
+	 */
+	private final boolean zoneMode;
 
 	private BMSModel model;
 	private int[] judgeArea;
@@ -57,6 +61,14 @@ public final class SkinHitErrorVisualizer extends SkinObject {
 								  int hiterrorMode, int emaMode, String lineColor, String centerColor,
 								  String PGColor, String GRColor, String GDColor, String BDColor, String PRColor,
 								  String emaColor, float alpha, int windowLength, int transparent, int drawDecay) {
+		this(width, judgeWidthMillis, lineWidth, colorMode, hiterrorMode, emaMode, lineColor, centerColor, PGColor, GRColor,
+				GDColor, BDColor, PRColor, emaColor, alpha, windowLength, transparent, drawDecay, 0);
+	}
+
+	public SkinHitErrorVisualizer(int width, int judgeWidthMillis, int lineWidth, int colorMode,
+								  int hiterrorMode, int emaMode, String lineColor, String centerColor,
+								  String PGColor, String GRColor, String GDColor, String BDColor, String PRColor,
+								  String emaColor, float alpha, int windowLength, int transparent, int drawDecay, int zoneMode) {
 
 		this.lineWidth = MathUtils.clamp(lineWidth, 1, 4);
 		this.width = width;
@@ -79,6 +91,7 @@ public final class SkinHitErrorVisualizer extends SkinObject {
 		this.hiterrorMode = hiterrorMode == 1 ? true : false;
 		this.colorMode    = colorMode == 1 ? true : false;
 		this.drawDecay    = drawDecay == 1 ? true : false;
+		this.zoneMode     = zoneMode == 1;
 	}
 
 	public void prepare(long time, MainState state) {
@@ -119,6 +132,16 @@ public final class SkinHitErrorVisualizer extends SkinObject {
 		// Clear canvas
 		shape.setColor(Color.CLEAR);
 		shape.fill();
+
+		// Judge windows, widest first so the narrower ones paint over them
+		if (zoneMode) {
+			for (int w = 3; w >= 0; w--) {
+				final int x1 = (width - lineWidth) / 2 + (int) (MathUtils.clamp(judgeArea[w * 2 + 1], -center, center) * -judgeWidthRate);
+				final int x2 = (width - lineWidth) / 2 + (int) (MathUtils.clamp(judgeArea[w * 2], -center, center) * -judgeWidthRate) + lineWidth;
+				shape.setColor(JColor[w]);
+				shape.fillRectangle(x1, 0, x2 - x1, windowLength * 2);
+			}
+		}
 
 		// Individual note hiterror
 		if (hiterrorMode) {

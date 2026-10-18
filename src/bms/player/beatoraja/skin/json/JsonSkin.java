@@ -308,6 +308,7 @@ public class JsonSkin {
 		public int windowLength = 30;
 		public int transparent = 0;
 		public int drawDecay = 1;
+		public int zoneMode = 0;
 	}
 
 	public static class TimingVisualizer {
