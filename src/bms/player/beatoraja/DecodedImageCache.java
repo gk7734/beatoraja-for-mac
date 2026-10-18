@@ -180,7 +180,11 @@ public final class DecodedImageCache {
 			if ((fileCodec == CODEC_LZ4 && LZ4_DECODE == null) || (fileCodec != CODEC_LZ4 && fileCodec != CODEC_DEFLATE)) {
 				return null;
 			}
-			pixmap = new Pixmap(width, height, Pixmap.Format.fromGdx2DPixmapFormat(format));
+			// mmapした画素領域: 解放時にOSへ返る(mallocの大きなブロックは解放後もプロセスに残る)
+			pixmap = MappedPixmap.create(width, height, format);
+			if (pixmap == null) {
+				pixmap = new Pixmap(width, height, Pixmap.Format.fromGdx2DPixmapFormat(format));
+			}
 			final MemorySegment pixels = MemorySegment.ofBuffer(pixmap.getPixels().duplicate().clear());
 			if (chunks != (pixels.byteSize() + chunkBytes - 1) / chunkBytes) {
 				pixmap.dispose();

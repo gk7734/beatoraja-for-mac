@@ -167,7 +167,7 @@ import SwiftUI
         guard !busy, save() else { return }
         let process = Process()
         process.executableURL = appURL.deletingLastPathComponent().appendingPathComponent("runtime/Contents/Home/bin/java")
-        var args = ["-Xms256m", "-Xmx4g", "--enable-native-access=ALL-UNNAMED,javafx.graphics", "--add-modules=javafx.controls,javafx.fxml,javafx.swing", "-Djava.library.path=\(appURL.appendingPathComponent("natives").path)", "-cp", appURL.appendingPathComponent("beatoraja.jar").path]
+        var args = ["-Xms64m", "-Xmx4g", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30", "-XX:G1PeriodicGCInterval=3000", "--enable-native-access=ALL-UNNAMED,javafx.graphics", "--add-modules=javafx.controls,javafx.fxml,javafx.swing", "-Djava.library.path=\(appURL.appendingPathComponent("natives").path)", "-cp", appURL.appendingPathComponent("beatoraja.jar").path]
         if tables { args += ["bms.player.beatoraja.MacMaintenance", "--tables"]; if let tableURL { args.append(tableURL) } }
         else if scan { args += ["bms.player.beatoraja.MacMaintenance", rebuild ? "--rebuild" : "--scan"] }
         else { args.insert("-XstartOnFirstThread", at: 0); args += ["bms.player.beatoraja.MacBootstrap", "-s"] }
