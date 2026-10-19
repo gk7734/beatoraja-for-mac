@@ -122,6 +122,11 @@ int bm_init(void *nswindow, int vsync, int nearest) {
         layer = (CAMetalLayer *)view.layer;
         layer.device = device;
         layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        // The window's sRGB tag (MacWindowColorSpace) does not reach this layer; untagged, its pixels go to a
+        // wide-gamut panel unconverted and look oversaturated.
+        CGColorSpaceRef srgb = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+        layer.colorspace = srgb;
+        CGColorSpaceRelease(srgb);
         // Screenshots read the drawable back.
         layer.framebufferOnly = NO;
         layer.opaque = YES;
