@@ -1,0 +1,66 @@
+# Pushing a v* tag builds the app and publishes the DMG and zip as a GitHub release. The annotated tag's message
+# becomes the release notes (GitHub's generated notes when it has none). Running it by hand only builds and keeps
+# the files as a workflow artifact.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '27'
+          java-package: jdk+fx
+          architecture: aarch64
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build app and DMG
+        env:
+          BEATORAJA_BUILD_DIR: ${{ runner.temp }}/build
+          BEATORAJA_OUTPUT_DIR: ${{ runner.temp }}/out
+          # No keychain identity on the runner; sign ad-hoc explicitly.
+          BEATORAJA_SIGN_IDENTITY: '-'
+        run: BEATORAJA_JDK="$JAVA_HOME" bash macos/build-app.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beatoraja-AppleSilicon
+          path: |
+            ${{ runner.temp }}/out/beatoraja-AppleSilicon.dmg
+            ${{ runner.temp }}/out/beatoraja-AppleSilicon.zip
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          OUT: ${{ runner.temp }}/out
+        run: |
+          # checkout leaves only a lightweight ref; fetch the tag object to read its message.
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          git tag -l --format='%(contents:body)' "$TAG" > "$RUNNER_TEMP/notes.md"
+          if [ "$(git cat-file -t "$TAG")" = tag ] && [ -s "$RUNNER_TEMP/notes.md" ]; then
+            NOTES=(--notes-file "$RUNNER_TEMP/notes.md")
+          else
+            NOTES=(--generate-notes)
+          fi
+          TITLE="$(git tag -l --format='%(contents:subject)' "$TAG")"
+          [ "$(git cat-file -t "$TAG")" = tag ] && [ -n "$TITLE" ] || TITLE="$TAG"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$OUT/beatoraja-AppleSilicon.dmg" "$OUT/beatoraja-AppleSilicon.zip" --clobber
+          else
+            gh release create "$TAG" "$OUT/beatoraja-AppleSilicon.dmg" "$OUT/beatoraja-AppleSilicon.zip" \
+              --title "$TITLE" "${NOTES[@]}"
+          fi

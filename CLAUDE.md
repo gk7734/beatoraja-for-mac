@@ -24,6 +24,8 @@ What the script does, in order (useful when only one part needs rebuilding):
 5. Compiles `macos/Launcher/*.swift` with `swiftc` and **replaces the jpackage executable** `Contents/MacOS/beatoraja` with the Swift launcher. Prefers the MacOSX26.5 SDK if present because the macOS 27 beta CLT lacks SwiftUIMacros.
 6. Signs the app with `BEATORAJA_SIGN_IDENTITY`, else the self-signed "beatoraja Local Signing" identity if it is in the login keychain, else ad-hoc. Ad-hoc signatures change every build, which silently drops the Input Monitoring grant that HID keyboard input needs.
 
+Releases are automatic: pushing a `v*` tag runs `.github/workflows/release.yml` on a `macos-26` runner (Zulu 27 + FX, ad-hoc signed) and publishes the DMG and zip. The annotated tag's subject is the release title and its body the notes (falls back to GitHub's generated notes for a lightweight tag). A manual run (`gh workflow run Release`) only builds and keeps the files as an artifact.
+
 Quick Java-only compile check (no packaging):
 
 ```sh
