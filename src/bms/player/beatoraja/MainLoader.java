@@ -33,6 +33,8 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 
+import org.lwjgl.glfw.GLFW;
+
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
@@ -163,6 +165,12 @@ public class MainLoader extends Application {
 			System.exit(1);
 		}
 
+		// Test runs (-Dbeatoraja.hiddenWindow=true) keep the window hidden and add no Dock icon or menu bar, so nothing
+		// takes focus. Init hints only count before GLFW starts, which AutoResolution below already does.
+		final boolean hiddenWindow = Boolean.getBoolean("beatoraja.hiddenWindow");
+		if (hiddenWindow) {
+			GLFW.glfwInitHint(GLFW.GLFW_COCOA_MENUBAR, GLFW.GLFW_FALSE);
+		}
 		bms.player.beatoraja.skin.Skin.setKeepAspect(config.isKeepSkinAspect());
 		boolean hiDpiRendering = config.isHiDpiRendering();
 		if (config.isAutoResolution()) {
@@ -214,6 +222,7 @@ public class MainLoader extends Application {
                 }
             });
             cfg.setTitle(MainController.getVersion());
+            cfg.setInitialVisible(!hiddenWindow);
             cfg.setAudioConfig(config.getAudioConfig().getDeviceSimultaneousSources(),
                 Math.max(config.getAudioConfig().getDeviceBufferSize(), 512), 3);
             cfg.disableAudio(config.getAudioConfig().getDriver() == DriverType.PortAudio

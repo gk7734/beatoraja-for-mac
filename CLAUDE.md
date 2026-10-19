@@ -26,6 +26,8 @@ What the script does, in order (useful when only one part needs rebuilding):
 
 Releases are automatic: pushing a `v*` tag runs `.github/workflows/release.yml` on a `macos-26` runner (Zulu 27 + FX, ad-hoc signed) and publishes the DMG and zip. The annotated tag's subject is the release title and its body the notes, with SHA-256 sums appended (falls back to GitHub's generated notes for a lightweight tag). A manual run (`gh workflow run Release`) only builds and keeps the files as an artifact.
 
+Test launches must be silent and invisible: run from a scratch data folder with `systemvolume`/`keyvolume`/`bgvolume` set to 0 in its `config_sys.json`, and pass `-Dbeatoraja.hiddenWindow=true` (and `-Dapple.awt.UIElement=true`) so the game window stays hidden with no Dock icon or menu bar.
+
 Quick Java-only compile check (no packaging):
 
 ```sh
