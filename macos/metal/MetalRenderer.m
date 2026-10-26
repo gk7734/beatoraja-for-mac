@@ -50,7 +50,11 @@ static NSString *const kShaders = @
 "  float sd = t.sample(s, in.uv - u.shadowOffset).a;\n"
 "  float sa = smoothstep(0.5 - u.shadowSmoothing, 0.5 + u.shadowSmoothing, sd);\n"
 "  float4 shadow = float4(u.shadowColor.rgb, u.shadowColor.a * sa);\n"
-"  return mix(shadow, mainColor, mainColor.a); }\n";
+"  return mix(shadow, mainColor, mainColor.a); }\n"
+// Full-screen triangle that writes alpha 1 (the pipeline masks colour), so the window never shows through.
+"vertex float4 v_fill(uint id [[vertex_id]]) {\n"
+"  float2 p = float2((id << 1) & 2, id & 2); return float4(p * 2.0 - 1.0, 0.0, 1.0); }\n"
+"fragment float4 f_opaque() { return float4(0.0, 0.0, 0.0, 1.0); }\n";
 
 // Shader ids shared with MetalRenderer.java
 enum { SHADER_DEFAULT = 0, SHADER_BILINEAR = 1, SHADER_FFMPEG = 2, SHADER_LAYER = 3, SHADER_DISTANCE_FIELD = 4, SHADER_COUNT };
@@ -75,6 +79,7 @@ enum { KIND_RGBA = 0, KIND_ALPHA = 1, KIND_LUMINANCE_ALPHA = 2, KIND_LUMINANCE =
 static id<MTLDevice> device;
 static id<MTLCommandQueue> queue;
 static id<MTLLibrary> library;
+static id<MTLRenderPipelineState> opaquePipeline;
 static CAMetalLayer *layer;
 static NSMutableDictionary<NSNumber *, id<MTLRenderPipelineState>> *pipelines;
 static NSMutableDictionary<NSNumber *, id<MTLSamplerState>> *samplers;
@@ -105,6 +110,13 @@ int bm_init(void *nswindow, int vsync, int nearest) {
         library = [device newLibraryWithSource:kShaders options:nil error:&error];
         if (!library) { NSLog(@"[metal] shader compile failed: %@", error); return; }
         pipelines = [NSMutableDictionary dictionary];
+        MTLRenderPipelineDescriptor *fill = [MTLRenderPipelineDescriptor new];
+        fill.vertexFunction = [library newFunctionWithName:@"v_fill"];
+        fill.fragmentFunction = [library newFunctionWithName:@"f_opaque"];
+        fill.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+        fill.colorAttachments[0].writeMask = MTLColorWriteMaskAlpha;
+        opaquePipeline = [device newRenderPipelineStateWithDescriptor:fill error:&error];
+        if (!opaquePipeline) NSLog(@"[metal] opaque pipeline failed: %@", error);
         samplers = [NSMutableDictionary dictionary];
         for (int i = 0; i < FRAMES; i++) {
             vertexBuffers[i] = [device newBufferWithLength:VERTEX_BYTES options:MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined];
@@ -421,6 +433,17 @@ void bm_end_frame(void) {
         if (!commands) return;
         endEncoder();
         target = nil;
+        // Skins leave alpha below 1 where they draw translucent images over nothing, and Core Animation composites
+        // the drawable with that alpha even on an opaque layer (the desktop showed through the select screen's
+        // guide bar). Only the alpha channel is filled, so the frame's colours are untouched.
+        if (opaquePipeline) {
+            beginEncoder();
+            if (encoder) {
+                [encoder setRenderPipelineState:opaquePipeline];
+                [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+            }
+            endEncoder();
+        }
         [commands presentDrawable:drawable];
         dispatch_semaphore_t semaphore = inflight;
         [commands addCompletedHandler:^(id<MTLCommandBuffer> b) { dispatch_semaphore_signal(semaphore); }];
