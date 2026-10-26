@@ -57,9 +57,22 @@ xcrun swiftc -sdk "$SDK" -parse-as-library -O -target arm64-apple-macos14.0 -mod
 /usr/libexec/PlistBuddy -c 'Set :LSMinimumSystemVersion 14.0' "$APP/Contents/Info.plist"
 # A fixed signing identity keeps macOS privacy grants (Input Monitoring for HID keyboard input) across rebuilds;
 # an ad-hoc signature changes with every build, so macOS sees a new app each time. BEATORAJA_SIGN_IDENTITY wins
-# ("-" forces ad-hoc), then the self-signed "beatoraja Local Signing" identity if the keychain has it, else ad-hoc.
-SIGN="${BEATORAJA_SIGN_IDENTITY:-$(security find-identity -p codesigning 2>/dev/null | awk '/"beatoraja Local Signing"/ {print $2; exit}')}"
-codesign --force --deep --sign "${SIGN:--}" "$APP"
+# ("-" forces ad-hoc), then a Developer ID Application identity (hardened runtime, notarized when
+# BEATORAJA_NOTARY_PROFILE names a notarytool keychain profile), then the self-signed "beatoraja Local Signing"
+# identity, else ad-hoc.
+IDENTITIES="$(security find-identity -p codesigning 2>/dev/null || true)"
+SIGN="${BEATORAJA_SIGN_IDENTITY:-$(awk -F'"' '/"Developer ID Application: / {print $2; exit}' <<<"$IDENTITIES")}"
+SIGN="${SIGN:-$(awk '/"beatoraja Local Signing"/ {print $2; exit}' <<<"$IDENTITIES")}"
+DEVELOPER_ID=
+if [ -n "$SIGN" ] && [ "$SIGN" != - ] && grep -F -- "$SIGN" <<<"$IDENTITIES" | grep -q '"Developer ID Application: '; then
+ DEVELOPER_ID="$SIGN"
+fi
+if [ -n "$DEVELOPER_ID" ]; then
+ bash "$PROJECT/macos/sign-app.sh" "$APP" "$DEVELOPER_ID"
+ if [ -n "${BEATORAJA_NOTARY_PROFILE:-}" ]; then bash "$PROJECT/macos/notarize.sh" "$APP" "$BEATORAJA_NOTARY_PROFILE"; fi
+else
+ codesign --force --deep --sign "${SIGN:--}" "$APP"
+fi
 codesign --verify --deep --strict "$APP"
 mkdir -p "$DEST"
 python3 - "$APP" "$DEST" "$BUILD" <<'COPY'
@@ -80,4 +93,4 @@ ditto -c -k --norsrc --keepParent "$APP" "$DEST/beatoraja-AppleSilicon.zip"
 printf '%s\n' "$APP" > "$BUILD/staged-app.txt"
 printf 'Built %s\n' "$DEST/beatoraja-AppleSilicon.zip"
 
-BEATORAJA_BUILD_DIR="$BUILD" BEATORAJA_OUTPUT_DIR="$DEST" bash "$PROJECT/macos/build-dmg.sh"
+BEATORAJA_BUILD_DIR="$BUILD" BEATORAJA_OUTPUT_DIR="$DEST" BEATORAJA_DMG_SIGN_IDENTITY="$DEVELOPER_ID" bash "$PROJECT/macos/build-dmg.sh"

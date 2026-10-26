@@ -38,7 +38,7 @@ BEATORAJA_JDK=/path/to/jdk/Contents/Home bash macos/build-app.sh
 
 The app, a zip and the installer DMG are written to the parent folder of the project. Set `BEATORAJA_BUILD_DIR`,
 `BEATORAJA_OUTPUT_DIR` or `BEATORAJA_MACOS_SDK` to change the paths. The installer layout needs
-[uv](https://docs.astral.sh/uv/) (`dmgbuild`); without it a plain DMG is built. The app is ad-hoc signed.
+[uv](https://docs.astral.sh/uv/) (`dmgbuild`); without it a plain DMG is built. With a Developer ID Application certificate in the keychain the app is signed for notarization, and `BEATORAJA_NOTARY_PROFILE=<notarytool profile>` also notarizes the app and DMG; otherwise it is ad-hoc signed.
 
 <details>
 <summary>Core Audio smoke tests (play silence on the default output)</summary>

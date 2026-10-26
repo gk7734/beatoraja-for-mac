@@ -25,5 +25,12 @@ else
   hdiutil create -volname "$VOLUME" -srcfolder "$STAGE/root" -format UDZO -o "$STAGE/beatoraja-AppleSilicon.dmg"
 fi
 hdiutil verify "$STAGE/beatoraja-AppleSilicon.dmg"
+# A Developer ID build signs the DMG too and, with a notary profile, notarizes and staples it.
+if [ -n "${BEATORAJA_DMG_SIGN_IDENTITY:-}" ]; then
+  codesign --force --timestamp --sign "$BEATORAJA_DMG_SIGN_IDENTITY" "$STAGE/beatoraja-AppleSilicon.dmg"
+  if [ -n "${BEATORAJA_NOTARY_PROFILE:-}" ]; then
+    bash "$PROJECT/macos/notarize.sh" "$STAGE/beatoraja-AppleSilicon.dmg" "$BEATORAJA_NOTARY_PROFILE"
+  fi
+fi
 mv -f "$STAGE/beatoraja-AppleSilicon.dmg" "$DEST/beatoraja-AppleSilicon.dmg"
 printf 'Built %s\n' "$DEST/beatoraja-AppleSilicon.dmg"

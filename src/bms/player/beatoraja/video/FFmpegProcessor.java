@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
@@ -52,6 +53,19 @@ public class FFmpegProcessor implements VideoProcessor {
 	 * dispose()を呼び出した後にprocessorDisposedはtrueになる
 	 */
 	private ProcessorStatus processorStatus = ProcessorStatus.TEXTURE_INACTIVE;
+
+	/**
+	 * FFmpeg's natives, loaded once on a thread nobody interrupts. MovieSeekThread is interrupted for every command,
+	 * and an interrupt while JavaCPP first unpacks the libraries (a new install, or jars that changed) fails their
+	 * class initialization for the rest of the session, so no movie or BGA would play.
+	 */
+	private static final CompletableFuture<Void> NATIVES = CompletableFuture.runAsync(() -> {
+		try {
+			FFmpegFrameGrabber.tryLoad();
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
+	});
 
 	public FFmpegProcessor(int fpsd) {
 		this.fpsd = fpsd;
@@ -252,6 +266,8 @@ public class FFmpegProcessor implements VideoProcessor {
 		}
 
 		private void openGrabber() throws Exception {
+			// join() waits without reacting to this thread's interrupts.
+			NATIVES.join();
 			grabber = new FFmpegFrameGrabber(new ByteArrayInputStream(movieBytes));
 			// BGRA keeps the channel order the ffmpeg shader expects and lets frames be copied with one bulk put.
 			grabber.setPixelFormat(avutil.AV_PIX_FMT_BGRA);
