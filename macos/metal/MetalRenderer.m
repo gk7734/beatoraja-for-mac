@@ -57,11 +57,16 @@ enum { SHADER_DEFAULT = 0, SHADER_BILINEAR = 1, SHADER_FFMPEG = 2, SHADER_LAYER 
 // Texture kinds shared with MetalRenderer.java
 enum { KIND_RGBA = 0, KIND_ALPHA = 1, KIND_LUMINANCE_ALPHA = 2, KIND_LUMINANCE = 3, KIND_TARGET = 4 };
 
-/** Transparent to the mouse so GLFW's content view keeps receiving every event. */
+/**
+ * Transparent to the mouse so GLFW's content view keeps receiving every event. Opaque to AppKit: it re-applies the
+ * view's opacity to the layer (e.g. when the window changes display), and a non-opaque layer lets the desktop show
+ * through wherever a skin leaves alpha below 1.
+ */
 @interface BeatorajaMetalView : NSView
 @end
 @implementation BeatorajaMetalView
 - (BOOL)wantsUpdateLayer { return YES; }
+- (BOOL)isOpaque { return YES; }
 - (CALayer *)makeBackingLayer { return [CAMetalLayer layer]; }
 - (NSView *)hitTest:(NSPoint)point { return nil; }
 - (BOOL)acceptsFirstResponder { return NO; }
@@ -308,6 +313,7 @@ int bm_begin_frame(int width, int height) {
             drawableHeight = height;
             layer.drawableSize = CGSizeMake(width, height);
         }
+        if (!layer.opaque) layer.opaque = YES;
         drawable = [layer nextDrawable];
         if (!drawable) { dispatch_semaphore_signal(inflight); return 0; }
         frameSlot = (frameSlot + 1) % FRAMES;
