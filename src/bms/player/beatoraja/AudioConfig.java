@@ -197,6 +197,10 @@ public class AudioConfig implements Validatable {
 		 */
 		AudioDevice,
         CoreAudio,
+        /**
+         * Apple default output Audio Unit with a real-time callback (lower latency, experimental)
+         */
+        CoreAudioUnit,
 	}
 	
 	public enum FrequencyType {

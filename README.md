@@ -41,13 +41,15 @@ The app, a zip and the installer DMG are written to the parent folder of the pro
 [uv](https://docs.astral.sh/uv/) (`dmgbuild`); without it a plain DMG is built. The app is ad-hoc signed.
 
 <details>
-<summary>Core Audio smoke test (plays silence on the default output)</summary>
+<summary>Core Audio smoke tests (play silence on the default output)</summary>
 
 ```sh
 JDK=/path/to/jdk/Contents/Home
 "$JDK/bin/javac" -cp '../.build/package-build/classes:lib/*' -d ../.build/package-build/test-classes macos/tests/CoreAudioSmokeTest.java
 "$JDK/bin/java" --enable-native-access=ALL-UNNAMED -Djava.library.path=../.build/package-build/input/natives -cp '../.build/package-build/test-classes:../.build/package-build/classes:lib/*' CoreAudioSmokeTest
 ```
+
+`macos/tests/AudioUnitSmokeTest.java` checks the low-latency Audio Unit output (`CoreAudioUnit`) the same way and prints its buffer sizes, latency and underruns.
 
 </details>
 

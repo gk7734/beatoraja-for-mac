@@ -23,6 +23,7 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 	private final Thread mixer;
 	private volatile AudioDevice device;
 	private final boolean coreAudio;
+	private final boolean audioUnit;
 	private final int framesPerBuffer;
 	private long idcount;
 	private volatile boolean stop;
@@ -30,12 +31,12 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 	public GdxAudioDeviceDriver(Config config) {
 		super(config.getSongResourceGen());
 		AudioConfig audioConfig = config.getAudioConfig();
+        audioUnit = audioConfig.getDriver() == AudioConfig.DriverType.CoreAudioUnit;
+        coreAudio = audioUnit || audioConfig.getDriver() == AudioConfig.DriverType.CoreAudio;
 		setSampleRate(audioConfig.getSampleRate() > 0 ? audioConfig.getSampleRate()
-                : audioConfig.getDriver() == AudioConfig.DriverType.CoreAudio
-                    ? CoreAudioDevice.defaultSampleRate() : 44100);
+                : coreAudio ? CoreAudioDevice.defaultSampleRate() : 44100);
 		channels = 2;
 
-        coreAudio = audioConfig.getDriver() == AudioConfig.DriverType.CoreAudio;
         framesPerBuffer = coreAudio
                 ? Math.max(32, Math.min(16384, audioConfig.getDeviceBufferSize()))
                 : getFramesPerBuffer(audioConfig.getDeviceBufferSize());
@@ -61,6 +62,14 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 	}
 
 	private AudioDevice openDevice() {
+		if (audioUnit) {
+			final AudioUnitDevice unit = new AudioUnitDevice(getSampleRate(), framesPerBuffer);
+			final AudioUnitDevice.Info info = unit.info();
+			Logger.getGlobal().info("Core Audio Unit : ioFrames=" + info.ioFrames() + ", ringFrames=" + info.ringFrames()
+					+ ", deviceLatencyFrames=" + info.deviceLatencyFrames()
+					+ String.format(", total≈%.1fms", unit.getLatency() * 1000.0 / getSampleRate()));
+			return unit;
+		}
 		if (coreAudio) {
 			return new CoreAudioDevice(getSampleRate(), framesPerBuffer);
 		}
@@ -79,7 +88,10 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 			try {
 				final AudioDevice old = device;
 				device = null;
-				if (old != null) old.dispose();
+				if (old != null) {
+					logUnderruns(old);
+					old.dispose();
+				}
 				final AudioDevice reopened = openDevice();
 				if (stop) {
 					// dispose() may have already given up waiting for this thread.
@@ -216,10 +228,25 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
 
 	@Override
 	public void run() {
+		if (audioUnit && !AudioUnitDevice.promoteCurrentThread(getSampleRate(), framesPerBuffer)) {
+			Logger.getGlobal().warning("Core Audio Unit : mixer thread kept normal scheduling");
+		}
+		// Audio Unit underruns are checked once a second and logged when they grow, so dropouts in play show up.
+		final int checkBlocks = Math.max(1, getSampleRate() / framesPerBuffer);
+		long underruns = 0;
+		int blocks = 0;
 		while (!stop) {
 			mix();
 			try {
 				device.writeSamples(buffer, 0, buffer.length);
+				if (audioUnit && ++blocks >= checkBlocks && device instanceof AudioUnitDevice unit) {
+					blocks = 0;
+					final long now = unit.info().underruns();
+					if (now > underruns) {
+						Logger.getGlobal().warning("Core Audio Unit underrun : +" + (now - underruns) + " (total " + now + ")");
+					}
+					underruns = now;
+				}
 			} catch (Throwable e) {
 				if (!stop) {
 					reopenDevice(e);
@@ -307,8 +334,20 @@ public class GdxAudioDeviceDriver extends AbstractAudioDriver<PCM> implements Ru
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         final AudioDevice current = device;
         device = null;
-        if (current != null) current.dispose();
+        if (current != null) {
+            logUnderruns(current);
+            current.dispose();
+        }
         super.dispose();
+	}
+
+	private static void logUnderruns(AudioDevice device) {
+		if (device instanceof AudioUnitDevice unit) {
+			try {
+				Logger.getGlobal().info("Core Audio Unit closed : underruns=" + unit.info().underruns());
+			} catch (IllegalStateException ignored) {
+			}
+		}
 	}
 
 	private static class MixerInput {

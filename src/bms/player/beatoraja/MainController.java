@@ -319,6 +319,7 @@ public final class MainController {
 			audio = new GdxSoundDriver(config);
 			break;
 		case CoreAudio:
+		case CoreAudioUnit:
 		case AudioDevice:
 			audio = new GdxAudioDeviceDriver(config);
 			break;

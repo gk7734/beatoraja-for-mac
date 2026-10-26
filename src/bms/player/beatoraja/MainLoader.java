@@ -226,7 +226,8 @@ public class MainLoader extends Application {
             cfg.setAudioConfig(config.getAudioConfig().getDeviceSimultaneousSources(),
                 Math.max(config.getAudioConfig().getDeviceBufferSize(), 512), 3);
             cfg.disableAudio(config.getAudioConfig().getDriver() == DriverType.PortAudio
-                    || config.getAudioConfig().getDriver() == DriverType.CoreAudio);
+                    || config.getAudioConfig().getDriver() == DriverType.CoreAudio
+                    || config.getAudioConfig().getDriver() == DriverType.CoreAudioUnit);
 
 			new Lwjgl3Application(new ApplicationListener() {
 				private FrameHitchWatchdog watchdog;
