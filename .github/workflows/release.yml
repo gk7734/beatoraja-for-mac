@@ -46,6 +46,8 @@ jobs:
           KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
           KEYCHAIN_PASSWORD="$(uuidgen)"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          # Recorded first so the cleanup step removes the keychain even if a later command fails.
+          echo "keychain=$KEYCHAIN" >> "$GITHUB_OUTPUT"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           printf '%s' "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
@@ -61,17 +63,14 @@ jobs:
           xcrun notarytool store-credentials beatoraja-notary --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_PASSWORD" --keychain "$KEYCHAIN"
           IDENTITY="$(security find-identity -p codesigning "$KEYCHAIN" | awk -F'"' '/Developer ID Application: / {print $2; exit}')"
-          {
-            echo "identity=$IDENTITY"
-            echo "keychain=$KEYCHAIN"
-          } >> "$GITHUB_OUTPUT"
+          echo "identity=$IDENTITY" >> "$GITHUB_OUTPUT"
 
       - name: Build app and DMG
         env:
           BEATORAJA_BUILD_DIR: ${{ runner.temp }}/build
           BEATORAJA_OUTPUT_DIR: ${{ runner.temp }}/out
           BEATORAJA_SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
-          BEATORAJA_NOTARY_PROFILE: ${{ steps.signing.outputs.keychain && 'beatoraja-notary' || '' }}
+          BEATORAJA_NOTARY_PROFILE: ${{ steps.signing.outputs.identity != '-' && 'beatoraja-notary' || '' }}
           BEATORAJA_NOTARY_KEYCHAIN: ${{ steps.signing.outputs.keychain }}
         run: BEATORAJA_JDK="$JAVA_HOME" bash macos/build-app.sh
 
