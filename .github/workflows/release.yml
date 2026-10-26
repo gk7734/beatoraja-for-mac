@@ -1,6 +1,6 @@
 # Pushing a v* tag builds the app and publishes the DMG and zip as a GitHub release. The annotated tag's message
 # becomes the release notes (GitHub's generated notes when it has none). Running it by hand only builds and keeps
-# the files as a workflow artifact.
+# the files as a workflow artifact. With the signing secrets set, both runs sign with the Developer ID and notarize.
 name: Release
 
 on:
@@ -28,13 +28,56 @@ jobs:
         with:
           enable-cache: false
 
+      # The Developer ID certificate and notary credentials go into a throwaway keychain. Without the secrets
+      # (forks) the build is signed ad-hoc and not notarized.
+      - name: Import signing identity
+        id: signing
+        env:
+          CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: 6HBMRNDGYC
+        run: |
+          if [ -z "$CERTIFICATE_P12" ] || [ -z "$APPLE_APP_PASSWORD" ]; then
+            echo 'identity=-' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          printf '%s' "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$KEYCHAIN" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/certificate.p12"
+          # Intermediates so codesign can build the chain on a runner that lacks them.
+          for ca in DeveloperIDCA DeveloperIDG2CA; do
+            curl -fsSL "https://www.apple.com/certificateauthority/$ca.cer" -o "$RUNNER_TEMP/$ca.cer"
+            security import "$RUNNER_TEMP/$ca.cer" -k "$KEYCHAIN" || true
+          done
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          xcrun notarytool store-credentials beatoraja-notary --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" --keychain "$KEYCHAIN"
+          IDENTITY="$(security find-identity -p codesigning "$KEYCHAIN" | awk -F'"' '/Developer ID Application: / {print $2; exit}')"
+          {
+            echo "identity=$IDENTITY"
+            echo "keychain=$KEYCHAIN"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build app and DMG
         env:
           BEATORAJA_BUILD_DIR: ${{ runner.temp }}/build
           BEATORAJA_OUTPUT_DIR: ${{ runner.temp }}/out
-          # No keychain identity on the runner; sign ad-hoc explicitly.
-          BEATORAJA_SIGN_IDENTITY: '-'
+          BEATORAJA_SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
+          BEATORAJA_NOTARY_PROFILE: ${{ steps.signing.outputs.keychain && 'beatoraja-notary' || '' }}
+          BEATORAJA_NOTARY_KEYCHAIN: ${{ steps.signing.outputs.keychain }}
         run: BEATORAJA_JDK="$JAVA_HOME" bash macos/build-app.sh
+
+      - name: Remove signing keychain
+        if: always() && steps.signing.outputs.keychain
+        run: security delete-keychain "${{ steps.signing.outputs.keychain }}"
 
       - uses: actions/upload-artifact@v7
         with:
